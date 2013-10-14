@@ -1,7 +1,6 @@
-#include "flog.h"
-#include "libshmipc.h"
+#include "Program.h"
 
-int main()
+int main(int argc, char** argv)
 {
-	return 0;
+	return Program::Create()->Run(argc, argv);
 }
