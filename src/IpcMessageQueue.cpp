@@ -1,15 +1,15 @@
-#include "Ipc.h"
+#include "IpcMessageQueue.h"
 #include "flog.h"
 
 #include <libshmipc.h>
 //#include <mutex>
 
-class CIpc : public Ipc {
+class CIpcMessageQueue : public IpcMessageQueue {
 	shmipc* readQueue, *writeQueue;
 	//std::mutex readLock, writeLock;
 
 	public:
-	CIpc(std::string name, bool isHost = false){
+	CIpcMessageQueue(std::string name, bool isHost = false){
 		std::string writeName = name;
 		std::string readName = name;
 
@@ -84,69 +84,13 @@ class CIpc : public Ipc {
 		AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "failed to return read buffer");
 	}
 
-	~CIpc(){
+	~CIpcMessageQueue(){
 		shmipc_destroy(&writeQueue);
 		shmipc_destroy(&readQueue);
 	}
 };
 
-IpcPtr Ipc::Create(std::string name, bool isHost)
+IpcMessageQueuePtr IpcMessageQueue::Create(std::string name, bool isHost)
 {
-	return IpcPtr(new CIpc(name, isHost));
+	return IpcMessageQueuePtr(new CIpcMessageQueue(name, isHost));
 }
-
-#if 0
-
-ReadBuffer IPC::GetReadBuffer(int timeout)
-{
-	WaitForSingleObject(readLock, INFINITE);
-
-	ReadBuffer ret;
-	MmapMessageHeader header;
-	ret.data = Mmap_AcquireBufferR(readQueue, &header, timeout);
-
-	if(ret.data){
-		ret.type = header.type;
-		ret.dataLen = header.length;
-	}
-
-	ReleaseMutex(readLock);
-
-	return ret;
-}
-
-void IPC::ReturnReadBuffer(ReadBuffer buffer)
-{
-	if(buffer.data){
-		Mmap_ReturnBufferR(readQueue, &buffer.data);
-	}
-}
-
-bool IPC::WriteMessage(std::string type, std::string message, int timeout)
-{
-	WaitForSingleObject(writeLock, INFINITE);
-
-	bool ret = false;
-	char* buffer = Mmap_AcquireBufferW(writeQueue, timeout);
-
-	if(buffer){
-		memcpy(buffer, message.c_str(), message.length());
-		Mmap_ReturnBufferW(writeQueue, &buffer, message.length(), type.c_str());
-		ret = true;
-	}
-
-	ReleaseMutex(writeLock);
-	return ret;
-}
-
-char* IPC::GetWriteBuffer(int timeout)
-{
-	return Mmap_AcquireBufferW(writeQueue, timeout);
-}
-
-void IPC::ReturnWriteBuffer(std::string type, char** buffer, int len)
-{
-	Mmap_ReturnBufferW(writeQueue, buffer, len, type.c_str());
-}
-
-#endif

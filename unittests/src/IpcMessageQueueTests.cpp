@@ -1,11 +1,11 @@
 #include "Tests.h"
-#include "Ipc.h"
+#include "IpcMessageQueue.h"
 
-DEF_TEST(Ipc, SendRecvMessage)
+DEF_TEST(IpcMessageQueue, SendRecvMessage)
 {
 	try {
-		IpcPtr host = Ipc::Create("test", true);
-		IpcPtr client = Ipc::Create("test", false);
+		IpcMessageQueuePtr host = IpcMessageQueue::Create("test", true);
+		IpcMessageQueuePtr client = IpcMessageQueue::Create("test", false);
 
 		bool ret = host->WriteMessage("test", "hello");
 		TEST_ASSERT(ret, "unexpected timeout when writing message");

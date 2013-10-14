@@ -3,7 +3,8 @@
 
 #include "ITest.h"
 
-DECL_TEST(Ipc, SendRecvMessage);
+DECL_TEST(IpcMessageQueue, SendRecvMessage);
+DECL_TEST(SharedMem, ReadWrite);
 
 #endif
 

@@ -4,12 +4,12 @@
 #include <memory>
 #include "Macros.h"
 
-class Ipc;
-typedef std::shared_ptr<Ipc> IpcPtr;
+class IpcMessageQueue;
+typedef std::shared_ptr<IpcMessageQueue> IpcMessageQueuePtr;
 
 DefEx(IpcEx);
 
-class Ipc
+class IpcMessageQueue
 {
 	public:
 	virtual bool ReadMessage(std::string& type, std::string& message, int timeout = -1) = 0;
@@ -21,7 +21,7 @@ class Ipc
 	virtual char* GetWriteBuffer(int timeout = -1) = 0;
 	virtual void ReturnWriteBuffer(std::string type, char** buffer, int len) = 0;
 	
-	static IpcPtr Create(std::string name, bool isHost = false);
+	static IpcMessageQueuePtr Create(std::string name, bool isHost = false);
 };
 
 #endif

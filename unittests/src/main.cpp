@@ -7,7 +7,8 @@ int main(int argc, char** argv)
 {
 	std::vector<ITest*> tests;
 
-	tests.push_back(new Test_Ipc_SendRecvMessage());
+	tests.push_back(new Test_IpcMessageQueue_SendRecvMessage());
+	tests.push_back(new Test_SharedMem_ReadWrite());
 
 	int ret = 0;
 	for(auto test : tests){
