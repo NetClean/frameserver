@@ -21,7 +21,7 @@ class CIpcMessageQueue : public IpcMessageQueue {
 			auto err = shmipc_create(writeName.c_str(), 512, 32, SHMIPC_AM_WRITE, &writeQueue);
 			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not create writer");
 			
-			err = shmipc_create(readName.c_str(), 1920 * 1080 * 3, 32, SHMIPC_AM_READ, &readQueue);
+			err = shmipc_create(readName.c_str(), 512, 32, SHMIPC_AM_READ, &readQueue);
 			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not create reader");
 		}else{
 			auto err = shmipc_open(writeName.c_str(), SHMIPC_AM_WRITE, &writeQueue);

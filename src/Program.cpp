@@ -14,7 +14,9 @@ class CProgram : public Program {
 		PlatformPtr platform = Platform::Create();
 
 		std::string dir = platform->GetWorkingDirectory();
-		pluginHandler->AddPlugin("test.exe", Platform->CombinePath(dir, "VideoPlugins"));
+		pluginHandler->AddPlugin("test.exe", platform->CombinePath({dir, "VideoPlugins"}));
+
+		pluginHandler->StartSession("test", platform);
 
 		return 0;
 	}

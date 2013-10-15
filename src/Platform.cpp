@@ -2,6 +2,8 @@
 
 #include <cstdlib>
 
+#include "flog.h"
+
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
@@ -13,12 +15,15 @@ class Win32Platform : public Platform {
 	Win32Platform(){
 		// Create a job object with limits that kill the subprocesses on exit
 		jobHandle = CreateJobObject(NULL, NULL);
+		AssertEx(jobHandle != NULL, PlatformEx, "win32 error: " << GetLastError());
+			
 
 		JOBOBJECT_BASIC_LIMIT_INFORMATION info;
 		memset(&info, 0, sizeof(JOBOBJECT_BASIC_LIMIT_INFORMATION));
 		info.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 
-		SetInformationJobObject(jobHandle, JobObjectBasicLimitInformation, &info, sizeof(JobObjectBasicLimitInformation));
+		int err = SetInformationJobObject(jobHandle, JobObjectBasicLimitInformation, &info, sizeof(JobObjectBasicLimitInformation));
+		AssertEx(err != 0, PlatformEx, "win32 error: " << GetLastError());
 	}
 
 	~Win32Platform(){
@@ -58,9 +63,13 @@ class Win32Platform : public Platform {
 		si.dwFlags = STARTF_USESHOWWINDOW;
 		si.wShowWindow = SW_SHOWDEFAULT;
 
-		char* cmdLine = strdup(Tools::Join(args).c_str());
-		CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, directory.c_str(), &si, &pi); 
+		FlogD("starting process: " << executable);
+
+		char* cmdLine = strdup(Tools::Join({executable, Tools::Join(args)}).c_str());
+		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, directory.c_str(), &si, &pi); 
 		free(cmdLine);
+
+		AssertEx(err != 0, PlatformEx, "win32 error: " << GetLastError());
 	}
 };
 
