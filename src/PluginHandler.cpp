@@ -36,7 +36,7 @@ class CPluginHandler : public PluginHandler
 	void StartSession(const std::string& shmName, PlatformPtr platform){
 		for(auto& plugin : plugins){
 			try { 
-				platform->StartProcess(plugin.executable, {plugin.messageQueueName}, plugin.directory);
+				platform->StartProcess(plugin.executable, {plugin.messageQueueName, shmName}, plugin.directory);
 				plugin.started = true;
 			} catch (PlatformEx e) {
 				FlogE("could not start plugin: " << plugin.executable << " because: " << e.GetMsg());
