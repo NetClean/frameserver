@@ -10,13 +10,27 @@ class CProgram : public Program {
 	public:
 
 	int Run(int argc, char** argv){
-		PluginHandlerPtr pluginHandler = PluginHandler::Create();
-		PlatformPtr platform = Platform::Create();
+		try { 
+			PluginHandlerPtr pluginHandler = PluginHandler::Create();
+			PlatformPtr platform = Platform::Create();
 
-		std::string dir = platform->GetWorkingDirectory();
-		pluginHandler->AddPlugin("test.exe", platform->CombinePath({dir, "VideoPlugins"}));
+			std::string dir = platform->GetWorkingDirectory();
+			pluginHandler->AddPlugin("test.exe", platform->CombinePath({dir, "VideoPlugins"}));
 
-		pluginHandler->StartSession("test", platform);
+			pluginHandler->StartSession("test", platform);
+
+			for(int i = 0; i < 100; i++){
+				pluginHandler->WaitReady(platform);
+				pluginHandler->Signal(PluginHandler::SignalNewFrame);
+			}
+
+			pluginHandler->Signal(PluginHandler::SignalQuit);
+		}
+
+		catch (ExBase ex) {
+			FlogF("unhandled exception: " << ex.GetMsg());
+			return 1;
+		}
 
 		return 0;
 	}

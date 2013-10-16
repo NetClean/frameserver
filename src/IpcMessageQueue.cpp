@@ -42,7 +42,7 @@ class CIpcMessageQueue : public IpcMessageQueue {
 		AssertEx(err == SHMIPC_ERR_SUCCESS || err == SHMIPC_ERR_TIMEOUT, IpcEx, "failed to acquire read buffer");
 
 		if(err == SHMIPC_ERR_SUCCESS){
-			message.assign(buffer, length);
+			message.assign(buffer); //, length);
 			type.assign(cType);
 			shmipc_return_buffer_r(readQueue, &buffer);
 			return true;

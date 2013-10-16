@@ -31,7 +31,7 @@ class Win32Platform : public Platform {
 	}
 
 	void Sleep(int ms){
-		Sleep(ms);
+		::Sleep(ms);
 	}
 
 	std::string CombinePath(const StrVec& paths){

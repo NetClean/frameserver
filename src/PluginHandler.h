@@ -9,18 +9,20 @@
 class PluginHandler;
 typedef std::shared_ptr<PluginHandler> PluginHandlerPtr; 
 
+DefEx(PluginHandlerEx);
+
 class PluginHandler
 {
 	public:
 	enum SignalType {
 		SignalNewFrame,
-		SignalFinish
+		SignalQuit
 	};
 
 	virtual void AddPlugin(const std::string& executable, const std::string& directory) = 0;
 	virtual void StartSession(const std::string& shmName, PlatformPtr platform) = 0;
 	virtual void Signal(SignalType signal) = 0;
-	virtual void Wait() = 0;
+	virtual void WaitReady(PlatformPtr platform) = 0;
 
 	static PluginHandlerPtr Create();
 };

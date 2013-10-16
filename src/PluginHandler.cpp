@@ -26,7 +26,7 @@ class CPluginHandler : public PluginHandler
 
 		plugin.executable = executable;
 		plugin.directory = directory;
-		plugin.messageQueueName = "teest"; //UuidGenerator::Create()->GenerateUuid(RandChar::Create());
+		plugin.messageQueueName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
 		FlogExpD(plugin.messageQueueName);
 		plugin.messageQueue = IpcMessageQueue::Create(plugin.messageQueueName, true);
 
@@ -46,9 +46,22 @@ class CPluginHandler : public PluginHandler
 	}
 
 	void Signal(SignalType signal){
+		// TODO timeout
+		static std::string sigs[] = {"newframe", "quit"};
+		for(auto plugin : plugins){
+			FlogD("signaling");
+			plugin.messageQueue->WriteMessage("cmd", sigs[signal]);
+		}
 	}
 
-	void Wait(){
+	void WaitReady(PlatformPtr platform){
+		for(auto plugin : plugins){
+			std::string type, message;
+
+			plugin.messageQueue->ReadMessage(type, message);
+			AssertEx(type == "status", PluginHandlerEx, "unexpected message type: " << type);
+			AssertEx(message == "ready", PluginHandlerEx, "unexpected message: '" << message << "'");
+		}
 	}
 };
 
