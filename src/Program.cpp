@@ -44,10 +44,12 @@ class CProgram : public Program {
 
 				nFrames++;
 			}
+			
+			pluginHandler->Signal(PluginHandler::SignalQuit);
+			pluginHandler->WaitReady(platform);
+			pluginHandler->WaitResult(platform);
 
 			FlogD("decoded: " << nFrames << " frames");
-
-			pluginHandler->Signal(PluginHandler::SignalQuit);
 		}
 
 		catch (ExBase ex) {

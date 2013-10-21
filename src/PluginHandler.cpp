@@ -55,12 +55,28 @@ class CPluginHandler : public PluginHandler
 	}
 
 	void WaitReady(PlatformPtr platform){
+		FlogD("waiting for ready");
 		for(auto plugin : plugins){
 			std::string type, message;
 
 			plugin.messageQueue->ReadMessage(type, message);
 			AssertEx(type == "status", PluginHandlerEx, "unexpected message type: " << type);
 			AssertEx(message == "ready", PluginHandlerEx, "unexpected message: '" << message << "'");
+		}
+	}
+
+	void WaitResult(PlatformPtr platform){
+		FlogD("waiting for result");
+		for(auto plugin : plugins){
+			std::string type;
+			const char* buffer;
+			size_t size;
+
+			plugin.messageQueue->GetReadBuffer(type, &buffer, &size);
+			
+			FlogExpD(type);
+			AssertEx(type == "result", PluginHandlerEx, "expected message 'result', but got: " << type);
+			FlogD("got result: " << buffer);
 		}
 	}
 };

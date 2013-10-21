@@ -15,7 +15,7 @@ class IpcMessageQueue
 	virtual bool ReadMessage(std::string& type, std::string& message, int timeout = -1) = 0;
 	virtual bool WriteMessage(std::string type, std::string message, int timeout = -1) = 0;
 	
-	virtual bool GetReadBuffer(char* out_type, const char** out_buffer, size_t* out_size, int timeout = -1) = 0;
+	virtual bool GetReadBuffer(std::string& type, const char** out_buffer, size_t* out_size, int timeout = -1) = 0;
 	virtual void ReturnReadBuffer(const char** buffer) = 0;
 
 	virtual char* GetWriteBuffer(int timeout = -1) = 0;

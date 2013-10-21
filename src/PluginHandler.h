@@ -23,6 +23,7 @@ class PluginHandler
 	virtual void StartSession(const std::string& shmName, PlatformPtr platform) = 0;
 	virtual void Signal(SignalType signal) = 0;
 	virtual void WaitReady(PlatformPtr platform) = 0;
+	virtual void WaitResult(PlatformPtr platform) = 0;
 
 	static PluginHandlerPtr Create();
 };
