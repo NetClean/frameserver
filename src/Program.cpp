@@ -10,46 +10,66 @@
 #include "SharedMem.h"
 #include "UuidGenerator.h"
 #include "RandChar.h"
+#include "IpcMessageQueue.h"
 
 class CProgram : public Program {
 	public:
 
+	void RunPlugins(const std::string& videoFile){
+		VideoPtr video = Video::Create(videoFile);
+		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
+
+		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
+		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096);
+
+		PluginHandlerPtr pluginHandler = PluginHandler::Create();
+		PlatformPtr platform = Platform::Create();
+
+		std::string dir = platform->GetWorkingDirectory();
+		pluginHandler->AddPlugin("test.exe", platform->CombinePath({dir, "VideoPlugins"}));
+
+		pluginHandler->StartSession(frameShmName, platform);
+
+		int nFrames = 0;
+
+		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
+			*((uint32_t*)frameShm->GetPtrRw()) = frame->width;
+			*((uint32_t*)frameShm->GetPtrRw() + 1) = frame->height;
+			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
+
+			pluginHandler->WaitReady(platform);
+			pluginHandler->Signal(PluginHandler::SignalNewFrame);
+
+			nFrames++;
+		}
+		
+		pluginHandler->Signal(PluginHandler::SignalQuit);
+		pluginHandler->WaitReady(platform);
+		pluginHandler->WaitResult(platform);
+
+		FlogD("decoded: " << nFrames << " frames");
+	}
+
 	int Run(int argc, char** argv){
-		FlogAssert(argc == 2, "usage: " << argv[0] << " [filename]");
+		FlogAssert(argc == 2, "usage: " << argv[0] << " [shm name]");
 
 		try { 
-			VideoPtr video = Video::Create(argv[1]);
-			FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
+			bool done = false;
+			IpcMessageQueuePtr hostQueue = IpcMessageQueue::Create(argv[1], false);
 
-			std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
-			SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096);
+			while(!done){
+				std::string type, message;
+				hostQueue->ReadMessage(type, message);
 
-			PluginHandlerPtr pluginHandler = PluginHandler::Create();
-			PlatformPtr platform = Platform::Create();
+				if(type == "run")
+					RunPlugins(message);
 
-			std::string dir = platform->GetWorkingDirectory();
-			pluginHandler->AddPlugin("test.exe", platform->CombinePath({dir, "VideoPlugins"}));
+				else if(type == "exit")
+					done = true;
 
-			pluginHandler->StartSession(frameShmName, platform);
-
-			int nFrames = 0;
-
-			while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
-				*((uint32_t*)frameShm->GetPtrRw()) = frame->width;
-				*((uint32_t*)frameShm->GetPtrRw() + 1) = frame->height;
-				memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
-
-				pluginHandler->WaitReady(platform);
-				pluginHandler->Signal(PluginHandler::SignalNewFrame);
-
-				nFrames++;
+				else
+					FlogE("unknown command: " << type);
 			}
-			
-			pluginHandler->Signal(PluginHandler::SignalQuit);
-			pluginHandler->WaitReady(platform);
-			pluginHandler->WaitResult(platform);
-
-			FlogD("decoded: " << nFrames << " frames");
 		}
 
 		catch (ExBase ex) {
