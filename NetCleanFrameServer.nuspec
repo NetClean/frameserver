@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>NetCleanFrameServer</id>
+    <version>0.0.1</version>
+    <authors>Fredrik Hultin</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>NetClean FrameServer</description>
+  </metadata>
+  <files>
+    <file src="NetCleanFrameServer.exe" target="frameserver" />
+    <file src="plugins/test/*.*" target="frameserver/plugins/test" />
+  </files>
+</package>

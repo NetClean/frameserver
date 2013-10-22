@@ -9,6 +9,7 @@
 
 struct Plugin
 {
+	std::string name;
 	std::string executable;
 	std::string directory;
 	IpcMessageQueuePtr messageQueue;
@@ -21,9 +22,10 @@ class CPluginHandler : public PluginHandler
 	public:
 	std::vector<Plugin> plugins;
 
-	void AddPlugin(const std::string& executable, const std::string& directory){
+	void AddPlugin(const std::string& name, const std::string& executable, const std::string& directory){
 		Plugin plugin;
 
+		plugin.name = name;
 		plugin.executable = executable;
 		plugin.directory = directory;
 		plugin.messageQueueName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
@@ -79,7 +81,7 @@ class CPluginHandler : public PluginHandler
 
 			char* outBuffer = hostQueue->GetWriteBuffer();
 			memcpy(outBuffer, buffer, size);
-			hostQueue->ReturnWriteBuffer(Str("results " << plugin.executable), &outBuffer, size);
+			hostQueue->ReturnWriteBuffer(Str("results " << plugin.name), &outBuffer, size);
 		}
 	}
 };

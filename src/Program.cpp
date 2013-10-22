@@ -15,18 +15,12 @@
 class CProgram : public Program {
 	public:
 
-	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue){
+	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue, PluginHandlerPtr pluginHandler, PlatformPtr platform){
 		VideoPtr video = Video::Create(videoFile);
 		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
 
 		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
 		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096);
-
-		PluginHandlerPtr pluginHandler = PluginHandler::Create();
-		PlatformPtr platform = Platform::Create();
-
-		std::string dir = platform->GetWorkingDirectory();
-		pluginHandler->AddPlugin("test.exe", platform->CombinePath({dir, "VideoPlugins"}));
 
 		pluginHandler->StartSession(frameShmName, platform);
 
@@ -56,13 +50,20 @@ class CProgram : public Program {
 		try { 
 			bool done = false;
 			IpcMessageQueuePtr hostQueue = IpcMessageQueue::Create(argv[1], false);
+			PluginHandlerPtr pluginHandler = PluginHandler::Create();
+			PlatformPtr platform = Platform::Create();
 
 			while(!done){
 				std::string type, message;
 				hostQueue->ReadMessage(type, message);
 
 				if(type == "run")
-					RunPlugins(message, hostQueue);
+					RunPlugins(message, hostQueue, pluginHandler, platform);
+
+				else if(type == "enable"){
+					std::string dir = platform->CombinePath({platform->GetWorkingDirectory(), "plugins"});
+					pluginHandler->AddPlugin(message, platform->CombinePath({dir, message, Str(message << ".exe")}), dir);
+				}
 
 				else if(type == "exit")
 					done = true;
