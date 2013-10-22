@@ -65,8 +65,8 @@ class CPluginHandler : public PluginHandler
 		}
 	}
 
-	void WaitResult(PlatformPtr platform){
-		FlogD("waiting for result");
+	void RelayResults(PlatformPtr platform, IpcMessageQueuePtr hostQueue){
+		FlogD("waiting for results");
 		for(auto plugin : plugins){
 			std::string type;
 			const char* buffer;
@@ -74,9 +74,12 @@ class CPluginHandler : public PluginHandler
 
 			plugin.messageQueue->GetReadBuffer(type, &buffer, &size);
 			
-			FlogExpD(type);
-			AssertEx(type == "result", PluginHandlerEx, "expected message 'result', but got: " << type);
-			FlogD("got result: " << buffer);
+			AssertEx(type == "results", PluginHandlerEx, "expected message 'results', but got: " << type);
+			FlogD("relaying results from: " << plugin.executable);
+
+			char* outBuffer = hostQueue->GetWriteBuffer();
+			memcpy(outBuffer, buffer, size);
+			hostQueue->ReturnWriteBuffer(Str("results " << plugin.executable), &outBuffer, size);
 		}
 	}
 };

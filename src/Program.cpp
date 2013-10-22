@@ -15,7 +15,7 @@
 class CProgram : public Program {
 	public:
 
-	void RunPlugins(const std::string& videoFile){
+	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue){
 		VideoPtr video = Video::Create(videoFile);
 		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
 
@@ -45,7 +45,7 @@ class CProgram : public Program {
 		
 		pluginHandler->Signal(PluginHandler::SignalQuit);
 		pluginHandler->WaitReady(platform);
-		pluginHandler->WaitResult(platform);
+		pluginHandler->RelayResults(platform, hostQueue);
 
 		FlogD("decoded: " << nFrames << " frames");
 	}
@@ -62,7 +62,7 @@ class CProgram : public Program {
 				hostQueue->ReadMessage(type, message);
 
 				if(type == "run")
-					RunPlugins(message);
+					RunPlugins(message, hostQueue);
 
 				else if(type == "exit")
 					done = true;

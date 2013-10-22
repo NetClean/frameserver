@@ -5,6 +5,7 @@
 #include <string>
 
 #include "Platform.h"
+#include "IpcMessageQueue.h"
 
 class PluginHandler;
 typedef std::shared_ptr<PluginHandler> PluginHandlerPtr; 
@@ -23,7 +24,7 @@ class PluginHandler
 	virtual void StartSession(const std::string& shmName, PlatformPtr platform) = 0;
 	virtual void Signal(SignalType signal) = 0;
 	virtual void WaitReady(PlatformPtr platform) = 0;
-	virtual void WaitResult(PlatformPtr platform) = 0;
+	virtual void RelayResults(PlatformPtr platform, IpcMessageQueuePtr hostQueue) = 0;
 
 	static PluginHandlerPtr Create();
 };
