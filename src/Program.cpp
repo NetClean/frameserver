@@ -41,24 +41,33 @@ class CProgram : public Program {
 		pluginHandler->WaitReady(platform);
 		pluginHandler->RelayResults(platform, hostQueue);
 
-		FlogD("decoded: " << nFrames << " frames");
+		hostQueue->WriteMessage("done", "");
+
+		FlogD("decoded: " << nFrames << " frames...");
 	}
 
 	int Run(int argc, char** argv){
 		FlogAssert(argc == 2, "usage: " << argv[0] << " [shm name]");
+		PlatformPtr platform;
 
 		try { 
+	 		platform = Platform::Create();
 			bool done = false;
 			IpcMessageQueuePtr hostQueue = IpcMessageQueue::Create(argv[1], false);
 			PluginHandlerPtr pluginHandler = PluginHandler::Create();
-			PlatformPtr platform = Platform::Create();
 
 			while(!done){
 				std::string type, message;
+				FlogD("waiting for message");
 				hostQueue->ReadMessage(type, message);
 
-				if(type == "run")
-					RunPlugins(message, hostQueue, pluginHandler, platform);
+				if(type == "run"){
+					try {
+						RunPlugins(message, hostQueue, pluginHandler, platform);
+					} catch (VideoEx ex) {
+						hostQueue->WriteMessage("video_error", ex.GetMsg());
+					}
+				}
 
 				else if(type == "enable"){
 					std::string dir = platform->CombinePath({platform->GetWorkingDirectory(), "plugins"});
@@ -75,8 +84,11 @@ class CProgram : public Program {
 
 		catch (ExBase ex) {
 			FlogF("unhandled exception: " << ex.GetMsg());
+			platform->Sleep(5000);
 			return 1;
 		}
+
+		FlogD("bye bye");
 
 		return 0;
 	}

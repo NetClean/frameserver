@@ -15,19 +15,34 @@ class Win32Platform : public Platform {
 	Win32Platform(){
 		// Create a job object with limits that kill the subprocesses on exit
 		jobHandle = CreateJobObject(NULL, NULL);
-		AssertEx(jobHandle != NULL, PlatformEx, "win32 error: " << GetLastError());
+		AssertEx(jobHandle != 0, PlatformEx, "(CreateJobObject) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");
 			
+		JOBOBJECT_EXTENDED_LIMIT_INFORMATION eInfo;
+		memset(&eInfo, 0, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+		eInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 
-		JOBOBJECT_BASIC_LIMIT_INFORMATION info;
-		memset(&info, 0, sizeof(JOBOBJECT_BASIC_LIMIT_INFORMATION));
-		info.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-
-		int err = SetInformationJobObject(jobHandle, JobObjectBasicLimitInformation, &info, sizeof(JobObjectBasicLimitInformation));
-		AssertEx(err != 0, PlatformEx, "win32 error: " << GetLastError());
+		int err = SetInformationJobObject(jobHandle, JobObjectExtendedLimitInformation, &eInfo, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+		AssertEx(err != 0, PlatformEx, "(SetInformationJobObject) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");
 	}
 
 	~Win32Platform(){
 		CloseHandle(jobHandle);
+	}
+
+	std::string GetErrorStr(DWORD nErrorCode)
+	{
+		char* msg;
+		std::string ret = "Unknown";
+
+		int nChar = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, 
+			nErrorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&msg, 0, NULL);
+
+		if (nChar > 0){
+			ret.assign(msg);
+			free(msg);
+		}
+
+		return ret;
 	}
 
 	void Sleep(int ms){
@@ -69,7 +84,7 @@ class Win32Platform : public Platform {
 		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, directory.c_str(), &si, &pi); 
 		free(cmdLine);
 
-		AssertEx(err != 0, PlatformEx, "win32 error: " << GetLastError());
+		AssertEx(err != 0, PlatformEx, "(CreateProcess) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");
 	}
 };
 
