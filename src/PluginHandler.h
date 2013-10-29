@@ -22,6 +22,7 @@ class PluginHandler
 
 	virtual void AddPlugin(const std::string& name, const std::string& executable, const std::string& directory) = 0;
 	virtual void StartSession(const std::string& shmName, PlatformPtr platform) = 0;
+	virtual void EndSession() = 0;
 	virtual void Signal(SignalType signal) = 0;
 	virtual void WaitReady(PlatformPtr platform) = 0;
 	virtual void RelayResults(PlatformPtr platform, IpcMessageQueuePtr hostQueue) = 0;

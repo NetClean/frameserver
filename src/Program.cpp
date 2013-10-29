@@ -14,8 +14,7 @@
 
 class CProgram : public Program {
 	public:
-
-	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue, PluginHandlerPtr pluginHandler, PlatformPtr platform){
+	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue, PluginHandlerPtr pluginHandler, PlatformPtr platform, int totFrames){
 		VideoPtr video = Video::Create(videoFile);
 		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
 
@@ -29,6 +28,7 @@ class CProgram : public Program {
 		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
 			*((uint32_t*)frameShm->GetPtrRw()) = frame->width;
 			*((uint32_t*)frameShm->GetPtrRw() + 1) = frame->height;
+			*((uint32_t*)frameShm->GetPtrRw() + 2) = totFrames;
 			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 
 			pluginHandler->WaitReady(platform);
@@ -40,6 +40,8 @@ class CProgram : public Program {
 		pluginHandler->Signal(PluginHandler::SignalQuit);
 		pluginHandler->WaitReady(platform);
 		pluginHandler->RelayResults(platform, hostQueue);
+
+		pluginHandler->EndSession();
 
 		hostQueue->WriteMessage("done", "");
 
@@ -63,7 +65,9 @@ class CProgram : public Program {
 
 				if(type == "run"){
 					try {
-						RunPlugins(message, hostQueue, pluginHandler, platform);
+						int nFrames = Video::CountFramesInFile(message);
+						RunPlugins(message, hostQueue, pluginHandler, platform, nFrames);
+						FlogExpD(nFrames);
 					} catch (VideoEx ex) {
 						hostQueue->WriteMessage("video_error", ex.GetMsg());
 					}

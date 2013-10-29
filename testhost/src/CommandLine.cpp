@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "Tools.h"
+
 std::queue<std::vector<std::string> > CommandLine::queue;
 SDL_mutex* CommandLine::mutex = 0;
 SDL_Thread* CommandLine::thread = 0;
@@ -26,12 +28,16 @@ int CommandLine::ThreadCallback(void* data)
 		std::getline(std::cin, line);
 		std::stringstream parse(line);
 
-		while(parse.good()){
-			std::string tmp;
-			parse >> tmp;
-			cmd.push_back(tmp);
+		std::string tmp;
+		parse >> tmp;
+		cmd.push_back(tmp);
+		if(parse.good()){
+			std::getline(parse, tmp);
+			tmp = Tools::Trim(tmp);
+			if(tmp != "")
+				cmd.push_back(tmp);
 		}
-
+		
 		SDL_mutexP(mutex);
 		queue.push(cmd);
 		SDL_mutexV(mutex);

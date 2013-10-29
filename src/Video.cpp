@@ -1,5 +1,6 @@
 #include "Video.h"
 #include "libvx.h"
+#include "flog.h"
 
 class CVideo : public Video {
 	public:
@@ -11,6 +12,7 @@ class CVideo : public Video {
 	}
 
 	~CVideo(){
+		FlogD("closing video");
 		vx_close(video);
 	}
 
@@ -21,6 +23,14 @@ class CVideo : public Video {
 
 	int GetHeight(){
 		return vx_get_height(video);
+	}
+
+	long long GetFilePosition(){
+		return vx_get_file_position(video);
+	}
+
+	long long GetFileSize(){
+		return vx_get_file_size(video);
 	}
 
 	float GetPixelAspectRatio(){
@@ -76,6 +86,14 @@ class VideoFrame : public Frame
 		vx_free_frame_buffer(buffer);
 	}
 };
+
+int Video::CountFramesInFile(const std::string& filename)
+{
+	int count = 0;
+	vx_error err = vx_count_frames_in_file(filename.c_str(), &count);
+	AssertEx(err == VX_ERR_SUCCESS, VideoEx, vx_get_error_str(err));
+	return count;
+}
 
 FramePtr Video::CreateFrame(int width, int height, PixelFormat fmt)
 {

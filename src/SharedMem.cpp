@@ -1,5 +1,6 @@
 #include "SharedMem.h"
 #include "libshmipc.h"
+#include "flog.h"
 
 class CSharedMem : public SharedMem {
 	public:
@@ -39,6 +40,7 @@ class CSharedMem : public SharedMem {
 	}
 
 	~CSharedMem(){
+		FlogD("destroying shm area");
 		shmipc_destroy_shm(&handle);
 	}
 

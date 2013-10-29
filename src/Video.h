@@ -26,8 +26,12 @@ class Video {
 	virtual float GetPixelAspectRatio() = 0;
 	virtual float GetFrameRate() = 0;
 	virtual float GetDuration() = 0;
+	virtual long long GetFilePosition() = 0;
+	virtual long long GetFileSize() = 0;
 
 	virtual bool GetFrame(int width, int height, PixelFormat fmt, FramePtr frame) = 0;
+	
+	static int CountFramesInFile(const std::string& filename); 
 	
 	static FramePtr CreateFrame(int width, int height, PixelFormat fmt);
 	static VideoPtr Create(const std::string& filename);

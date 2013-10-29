@@ -13,7 +13,6 @@ struct Plugin
 	std::string executable;
 	std::string directory;
 	IpcMessageQueuePtr messageQueue;
-	std::string messageQueueName;
 	bool started;
 };
 
@@ -28,9 +27,6 @@ class CPluginHandler : public PluginHandler
 		plugin.name = name;
 		plugin.executable = executable;
 		plugin.directory = directory;
-		plugin.messageQueueName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
-		FlogExpD(plugin.messageQueueName);
-		plugin.messageQueue = IpcMessageQueue::Create(plugin.messageQueueName, true);
 
 		plugins.push_back(plugin);
 	}
@@ -38,12 +34,23 @@ class CPluginHandler : public PluginHandler
 	void StartSession(const std::string& shmName, PlatformPtr platform){
 		for(auto& plugin : plugins){
 			try { 
-				platform->StartProcess(plugin.executable, {plugin.messageQueueName, shmName}, plugin.directory);
+				std::string messageQueueName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
+				FlogExpD(messageQueueName);
+				plugin.messageQueue = IpcMessageQueue::Create(messageQueueName, true);
+
+				platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory);
 				plugin.started = true;
 			} catch (PlatformEx e) {
 				FlogE("could not start plugin: " << plugin.executable << " because: " << e.GetMsg());
 				plugin.started = false;
 			}
+		}
+	}
+
+	void EndSession(){
+		for(auto& plugin : plugins){
+			plugin.started = false;
+			plugin.messageQueue = 0;
 		}
 	}
 

@@ -92,6 +92,7 @@ class CIpcMessageQueue : public IpcMessageQueue {
 	}
 
 	~CIpcMessageQueue(){
+		FlogD("destroying queue");
 		shmipc_destroy(&writeQueue);
 		shmipc_destroy(&readQueue);
 	}
