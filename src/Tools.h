@@ -23,6 +23,7 @@ class Tools {
 	static StrVec Split(const std::string& s, char delim = ' ');
 	static std::string Join(const StrVec& strs, const std::string delim = " ");
 	static std::string CombinePath(const StrVec& strs, char delim = '/');
+	static bool StartsWith(const std::string& haystack, const std::string& needle);
 };
 
 #endif

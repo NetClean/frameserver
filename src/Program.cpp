@@ -62,6 +62,7 @@ class CProgram : public Program {
 				std::string type, message;
 				FlogD("waiting for message");
 				hostQueue->ReadMessage(type, message);
+				FlogExpD(type);
 
 				if(type == "run"){
 					try {
@@ -74,8 +75,25 @@ class CProgram : public Program {
 				}
 
 				else if(type == "enable"){
-					std::string dir = platform->CombinePath({platform->GetWorkingDirectory(), "plugins"});
-					pluginHandler->AddPlugin(message, platform->CombinePath({dir, message, Str(message << ".exe")}), dir);
+					auto vec = Tools::Split(message);
+					if(vec.size() == 2){
+						std::string dir = platform->CombinePath({platform->GetWorkingDirectory(), "plugins"});
+						pluginHandler->AddPlugin(vec[0], platform->CombinePath({dir, vec[1], Str(vec[1] << ".exe")}), dir);
+					}else{
+						FlogE("enable expects 2 arguments (handle and plugin name)");
+					}
+				}
+
+				else if(Tools::StartsWith(type, "argument")){
+					auto vec = Tools::Split(type, '/');
+					if(vec.size() == 3){
+						FlogExpD(vec[0]);
+						FlogExpD(vec[1]);
+						FlogExpD(vec[2]);
+						pluginHandler->SetArgument(vec[1], vec[2], message);
+					}else{
+						FlogE("argument expects argument/[plugin name]/[key] (literally slashes)");
+					}
 				}
 
 				else if(type == "exit")

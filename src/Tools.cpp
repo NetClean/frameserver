@@ -27,6 +27,14 @@ int Tools::CstrListToMap(const char* const* cstr, char delim, StrStrMap& map)
 	return ret;
 }
 
+bool Tools::StartsWith(const std::string& haystack, const std::string& needle)
+{
+	if(needle.size() > haystack.size())
+		return false;
+	
+	return haystack.substr(0, needle.size()) == needle;
+}
+
 int Tools::ParseCookies(const std::string& str, StrStrMap& map)
 {
 	StrVec v = Split(str, ';');

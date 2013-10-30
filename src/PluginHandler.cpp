@@ -12,6 +12,7 @@ struct Plugin
 	std::string name;
 	std::string executable;
 	std::string directory;
+	std::vector<std::tuple<std::string, std::string>> args;
 	IpcMessageQueuePtr messageQueue;
 	bool started;
 };
@@ -31,6 +32,16 @@ class CPluginHandler : public PluginHandler
 		plugins.push_back(plugin);
 	}
 
+	void SendArguments(Plugin& plugin){
+		FlogExpD(Str(plugin.args.size()));
+		plugin.messageQueue->WriteMessage("arguments", Str(plugin.args.size()));
+		for(auto& arg : plugin.args){
+			FlogExpD(std::get<0>(arg));
+			FlogExpD(std::get<1>(arg));
+			plugin.messageQueue->WriteMessage(std::get<0>(arg), std::get<1>(arg));
+		}
+	}
+
 	void StartSession(const std::string& shmName, PlatformPtr platform){
 		for(auto& plugin : plugins){
 			try { 
@@ -40,11 +51,25 @@ class CPluginHandler : public PluginHandler
 
 				platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory);
 				plugin.started = true;
+
+				SendArguments(plugin);
 			} catch (PlatformEx e) {
 				FlogE("could not start plugin: " << plugin.executable << " because: " << e.GetMsg());
 				plugin.started = false;
 			}
 		}
+	}
+
+	void SetArgument(const std::string& pluginName, const std::string& key, const std::string& value){
+		bool found = false;
+		for(auto& plugin : plugins){
+			if(plugin.name == pluginName){
+				plugin.args.push_back(std::tuple<std::string, std::string>{key, value});
+				found = true;
+			}
+		}
+		if(!found)
+			FlogE("no such plugin enabled: " << pluginName);
 	}
 
 	void EndSession(){
