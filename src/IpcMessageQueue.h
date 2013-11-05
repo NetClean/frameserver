@@ -21,7 +21,8 @@ class IpcMessageQueue
 	virtual char* GetWriteBuffer(int timeout = -1) = 0;
 	virtual void ReturnWriteBuffer(std::string type, char** buffer, int len) = 0;
 	
-	static IpcMessageQueuePtr Create(std::string name, bool isHost = false);
+	static IpcMessageQueuePtr Create(std::string name, int readQueueBuffers = 4, int readQueueSize = 1024, int writeQueueBuffers = 4, int writeQueueSize = 4);
+	static IpcMessageQueuePtr Open(std::string name);
 };
 
 #endif

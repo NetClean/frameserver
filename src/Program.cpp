@@ -20,6 +20,8 @@ class CProgram : public Program {
 
 		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
 		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096);
+		
+		*((uint32_t*)frameShm->GetPtrRw() + 2) = totFrames;
 
 		pluginHandler->StartSession(frameShmName, platform);
 
@@ -28,7 +30,7 @@ class CProgram : public Program {
 		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
 			*((uint32_t*)frameShm->GetPtrRw()) = frame->width;
 			*((uint32_t*)frameShm->GetPtrRw() + 1) = frame->height;
-			*((uint32_t*)frameShm->GetPtrRw() + 2) = totFrames;
+			FlogExpD(totFrames);
 			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 
 			pluginHandler->WaitReady(platform);
@@ -55,7 +57,7 @@ class CProgram : public Program {
 		try { 
 	 		platform = Platform::Create();
 			bool done = false;
-			IpcMessageQueuePtr hostQueue = IpcMessageQueue::Create(argv[1], false);
+			IpcMessageQueuePtr hostQueue = IpcMessageQueue::Open(argv[1]);
 			PluginHandlerPtr pluginHandler = PluginHandler::Create();
 
 			while(!done){

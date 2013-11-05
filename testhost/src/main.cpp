@@ -2,12 +2,22 @@
 #include "Platform.h"
 #include "IpcMessageQueue.h"
 #include "flog.h"
+#include <fstream>
+
+void writeBuffer(const std::string& filename, const char* buffer, int size)
+{
+	std::ofstream file(filename.c_str(), std::ios::binary);
+
+	file.write(buffer, size);
+
+	file.close();
+}
 
 int main(int argc, char** argv)
 {
 	CommandLine::Start();
 	PlatformPtr platform = Platform::Create();
-	IpcMessageQueuePtr messageQueue = IpcMessageQueue::Create("test", true);
+	IpcMessageQueuePtr messageQueue = IpcMessageQueue::Create("test", 2, 1024 * 1024 * 10, 2, 1024 * 16);
 
 	bool done = false;
 
@@ -35,6 +45,9 @@ int main(int argc, char** argv)
 				auto sType = Tools::Split(type);
 				if(sType.size() == 2 && sType[0] == "results"){
 					FlogI("results from: " << sType[1] << " with size: " << size);
+					if(sType[1] == "video-collage"){
+						writeBuffer("collage.data", buffer, size);
+					}
 				}
 		
 				messageQueue->ReturnReadBuffer(&buffer);

@@ -9,7 +9,7 @@ class CIpcMessageQueue : public IpcMessageQueue {
 	//std::mutex readLock, writeLock;
 
 	public:
-	CIpcMessageQueue(std::string name, bool isHost = false){
+	CIpcMessageQueue(std::string name, bool isHost = false, int readQueueBuffers = 0, int readQueueSize = 0, int writeQueueBuffers = 0, int writeQueueSize = 0){
 		std::string writeName = name;
 		std::string readName = name;
 
@@ -18,10 +18,10 @@ class CIpcMessageQueue : public IpcMessageQueue {
 		n->append("_host_writer");
 
 		if(isHost){	
-			auto err = shmipc_create(writeName.c_str(), 512, 32, SHMIPC_AM_WRITE, &writeQueue);
+			auto err = shmipc_create(writeName.c_str(), writeQueueSize, writeQueueBuffers, SHMIPC_AM_WRITE, &writeQueue);
 			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not create writer");
 			
-			err = shmipc_create(readName.c_str(), 512, 32, SHMIPC_AM_READ, &readQueue);
+			err = shmipc_create(readName.c_str(), readQueueSize, readQueueBuffers, SHMIPC_AM_READ, &readQueue);
 			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not create reader");
 		}else{
 			auto err = shmipc_open(writeName.c_str(), SHMIPC_AM_WRITE, &writeQueue);
@@ -98,7 +98,12 @@ class CIpcMessageQueue : public IpcMessageQueue {
 	}
 };
 
-IpcMessageQueuePtr IpcMessageQueue::Create(std::string name, bool isHost)
+IpcMessageQueuePtr IpcMessageQueue::Create(std::string name, int readQueueBuffers, int readQueueSize, int writeQueueBuffers, int writeQueueSize)
 {
-	return IpcMessageQueuePtr(new CIpcMessageQueue(name, isHost));
+	return IpcMessageQueuePtr(new CIpcMessageQueue(name, true, readQueueBuffers, readQueueSize, writeQueueBuffers, writeQueueSize));
+}
+
+IpcMessageQueuePtr IpcMessageQueue::Open(std::string name)
+{
+	return IpcMessageQueuePtr(new CIpcMessageQueue(name));
 }

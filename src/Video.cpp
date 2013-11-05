@@ -83,6 +83,7 @@ class VideoFrame : public Frame
 	}
 
 	~VideoFrame(){
+		FlogD("freeing frame buffer");
 		vx_free_frame_buffer(buffer);
 	}
 };
