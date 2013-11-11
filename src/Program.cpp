@@ -33,14 +33,14 @@ class CProgram : public Program {
 			FlogExpD(totFrames);
 			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 
-			pluginHandler->WaitReady(platform);
+			pluginHandler->WaitReady(platform, hostQueue);
 			pluginHandler->Signal(PluginHandler::SignalNewFrame);
 
 			nFrames++;
 		}
 		
 		pluginHandler->Signal(PluginHandler::SignalQuit);
-		pluginHandler->WaitReady(platform);
+		pluginHandler->WaitReady(platform, hostQueue);
 		pluginHandler->RelayResults(platform, hostQueue);
 
 		pluginHandler->EndSession();

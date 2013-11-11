@@ -83,37 +83,66 @@ class CPluginHandler : public PluginHandler
 		// TODO timeout
 		static std::string sigs[] = {"newframe", "quit"};
 		for(auto plugin : plugins){
+			if(!plugin.started)
+				continue;
+
 			FlogD("signaling");
 			plugin.messageQueue->WriteMessage("cmd", sigs[signal]);
 		}
 	}
 
-	void WaitReady(PlatformPtr platform){
+	void WaitReady(PlatformPtr platform, IpcMessageQueuePtr hostQueue, int timeout){
 		FlogD("waiting for ready");
-		for(auto plugin : plugins){
-			std::string type, message;
+		for(auto& plugin : plugins){
+			if(!plugin.started)
+				continue;
 
-			plugin.messageQueue->ReadMessage(type, message);
-			AssertEx(type == "status", PluginHandlerEx, "unexpected message type: " << type);
-			AssertEx(message == "ready", PluginHandlerEx, "unexpected message: '" << message << "'");
+			std::string type, message;
+			if(!plugin.messageQueue->ReadMessage(type, message, 10000)){
+				FlogW("timeout for plugin: " << plugin.name);
+				plugin.started = false;
+
+				hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing frames");
+				continue;
+			}
+
+			if(!(type == "status"  && message == "ready")){
+				plugin.started = false;
+
+				if(Tools::StartsWith(type, "error")){
+					FlogD("relaying error from: " << plugin.executable);
+					hostQueue->WriteMessage(Str(type << " " << plugin.name), message);
+				}else{
+					FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
+				}
+			}
 		}
 	}
 
 	void RelayResults(PlatformPtr platform, IpcMessageQueuePtr hostQueue, int timeout){
 		FlogD("waiting for results");
 		for(auto plugin : plugins){
+			if(!plugin.started)
+				continue;
+
 			std::string type;
 			const char* buffer;
 			size_t size;
 
-			plugin.messageQueue->GetReadBuffer(type, &buffer, &size);
+			if(!plugin.messageQueue->GetReadBuffer(type, &buffer, &size, 30000)){
+				hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing results");
+				continue;
+			}
 			
-			AssertEx(type == "results", PluginHandlerEx, "expected message 'results', but got: " << type);
-			FlogD("relaying results from: " << plugin.executable);
+			if(Tools::StartsWith(type, "results")){
+				FlogD("relaying results from: " << plugin.executable);
 
-			char* outBuffer = hostQueue->GetWriteBuffer();
-			memcpy(outBuffer, buffer, size);
-			hostQueue->ReturnWriteBuffer(Str("results " << plugin.name), &outBuffer, size);
+				char* outBuffer = hostQueue->GetWriteBuffer();
+				memcpy(outBuffer, buffer, size);
+				hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
+			}else{
+				hostQueue->WriteMessage(Str("error 0 " << plugin.name), "unexpected message from plugin, expected results");
+			}
 		}
 	}
 };

@@ -49,6 +49,10 @@ int main(int argc, char** argv)
 						writeBuffer("collage.data", buffer, size);
 					}
 				}
+
+				if(sType.size() == 3 && sType[0] == "error"){
+					FlogI("error from: " << sType[2] << ", code: " << sType[1] << ", message: " << std::string(buffer, size));
+				}
 		
 				messageQueue->ReturnReadBuffer(&buffer);
 			}
