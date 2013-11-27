@@ -28,20 +28,20 @@ class CProgram : public Program {
 		int nFrames = 0;
 
 		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
+			pluginHandler->WaitAndRelayResults(platform, hostQueue);
+
 			*((uint32_t*)frameShm->GetPtrRw()) = frame->width;
 			*((uint32_t*)frameShm->GetPtrRw() + 1) = frame->height;
 			FlogExpD(totFrames);
 			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 
-			pluginHandler->WaitReady(platform, hostQueue);
 			pluginHandler->Signal(PluginHandler::SignalNewFrame);
 
 			nFrames++;
 		}
 		
 		pluginHandler->Signal(PluginHandler::SignalQuit);
-		pluginHandler->WaitReady(platform, hostQueue);
-		pluginHandler->RelayResults(platform, hostQueue);
+		pluginHandler->WaitAndRelayResults(platform, hostQueue);
 
 		pluginHandler->EndSession();
 

@@ -91,57 +91,51 @@ class CPluginHandler : public PluginHandler
 		}
 	}
 
-	void WaitReady(PlatformPtr platform, IpcMessageQueuePtr hostQueue, int timeout){
+	void WaitAndRelayResults(PlatformPtr platform, IpcMessageQueuePtr hostQueue, int timeout){
 		FlogD("waiting for ready");
 		for(auto& plugin : plugins){
 			if(!plugin.started)
 				continue;
 
-			std::string type, message;
-			if(!plugin.messageQueue->ReadMessage(type, message, 10000)){
-				FlogW("timeout for plugin: " << plugin.name);
-				plugin.started = false;
+			while(true){
+				std::string type;
+				const char* buffer;
+				size_t size;
 
-				hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing frames");
-				continue;
-			}
-
-			if(!(type == "status"  && message == "ready")){
-				plugin.started = false;
-
-				if(Tools::StartsWith(type, "error")){
-					FlogD("relaying error from: " << plugin.executable);
-					hostQueue->WriteMessage(Str(type << " " << plugin.name), message);
-				}else{
-					FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
+				if(!plugin.messageQueue->GetReadBuffer(type, &buffer, &size, 30000)){
+					hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing frames");
+					FlogW("timeout for plugin: " << plugin.name);
+					plugin.started = false;
+					break;
 				}
-			}
-		}
-	}
 
-	void RelayResults(PlatformPtr platform, IpcMessageQueuePtr hostQueue, int timeout){
-		FlogD("waiting for results");
-		for(auto plugin : plugins){
-			if(!plugin.started)
-				continue;
+				if(Tools::StartsWith(type, "results")){
+					// results message, relay to host
+					FlogD("relaying results from: " << plugin.executable);
 
-			std::string type;
-			const char* buffer;
-			size_t size;
+					char* outBuffer = hostQueue->GetWriteBuffer();
+					memcpy(outBuffer, buffer, size);
+					hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
+				}
 
-			if(!plugin.messageQueue->GetReadBuffer(type, &buffer, &size, 30000)){
-				hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing results");
-				continue;
-			}
-			
-			if(Tools::StartsWith(type, "results")){
-				FlogD("relaying results from: " << plugin.executable);
+				else if(type == "status"){
+					// TODO actually check if the message says "ready"
+					// plugin is ready for next frame
+					break;
+				}
 
-				char* outBuffer = hostQueue->GetWriteBuffer();
-				memcpy(outBuffer, buffer, size);
-				hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
-			}else{
-				hostQueue->WriteMessage(Str("error 0 " << plugin.name), "unexpected message from plugin, expected results");
+				else{
+					// unexpected message
+					plugin.started = false;
+
+					if(Tools::StartsWith(type, "error")){
+						FlogD("relaying error from: " << plugin.executable);
+						hostQueue->WriteMessage(Str(type << " " << plugin.name), buffer);
+					}else{
+						FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
+					}
+					break;
+				}
 			}
 		}
 	}
