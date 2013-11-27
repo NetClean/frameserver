@@ -28,7 +28,7 @@ class CProgram : public Program {
 		int nFrames = 0;
 
 		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
-			pluginHandler->WaitAndRelayResults(platform, hostQueue);
+			pluginHandler->ProcessMessages(platform, hostQueue, true);
 
 			*((uint32_t*)frameShm->GetPtrRw()) = frame->width;
 			*((uint32_t*)frameShm->GetPtrRw() + 1) = frame->height;
@@ -41,7 +41,7 @@ class CProgram : public Program {
 		}
 		
 		pluginHandler->Signal(PluginHandler::SignalQuit);
-		pluginHandler->WaitAndRelayResults(platform, hostQueue);
+		pluginHandler->ProcessMessages(platform, hostQueue, false);
 
 		pluginHandler->EndSession();
 

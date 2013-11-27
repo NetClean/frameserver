@@ -24,7 +24,7 @@ class PluginHandler
 	virtual void StartSession(const std::string& shmName, PlatformPtr platform) = 0;
 	virtual void EndSession() = 0;
 	virtual void Signal(SignalType signal) = 0;
-	virtual void WaitAndRelayResults(PlatformPtr platform, IpcMessageQueuePtr hostQueue, int timeout = 1000) = 0;
+	virtual void ProcessMessages(PlatformPtr platform, IpcMessageQueuePtr hostQueue, bool waitReady, int timeout = 1000) = 0;
 	virtual void SetArgument(const std::string& pluginName, const std::string& key, const std::string& value) = 0;
 
 	static PluginHandlerPtr Create();

@@ -91,7 +91,7 @@ class CPluginHandler : public PluginHandler
 		}
 	}
 
-	void WaitAndRelayResults(PlatformPtr platform, IpcMessageQueuePtr hostQueue, int timeout){
+	void ProcessMessages(PlatformPtr platform, IpcMessageQueuePtr hostQueue, bool waitReady, int timeout){
 		FlogD("waiting for ready");
 		for(auto& plugin : plugins){
 			if(!plugin.started)
@@ -108,25 +108,31 @@ class CPluginHandler : public PluginHandler
 						char* outBuffer = hostQueue->GetWriteBuffer();
 						memcpy(outBuffer, buffer, size);
 						hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
+
+						if(!waitReady)
+							done = true;
 					}
 
 					else if(type == "status"){
-						// TODO actually check if the message says "ready"
 						// plugin is ready for next frame
-						done = true;
+						// TODO actually check if the message says "ready"
+						if(waitReady)
+							done = true;
 					}
 
-					else{
-						// unexpected message
-						plugin.started = false;
-
-						if(Tools::StartsWith(type, "error")){
-							FlogD("relaying error from: " << plugin.executable);
-							hostQueue->WriteMessage(Str(type << " " << plugin.name), buffer);
-						}else{
-							FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
-						}
+					else if(Tools::StartsWith(type, "error")){
+						// error
+						FlogD("relaying error from: " << plugin.executable);
 						done = true;
+						plugin.started = false;
+						hostQueue->WriteMessage(Str(type << " " << plugin.name), buffer);
+					}
+					
+					else{
+						// unknown
+						FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
+						done = true;
+						plugin.started = false;
 					}
 				}, 30000);
 					

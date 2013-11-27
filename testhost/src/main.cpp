@@ -35,12 +35,7 @@ int main(int argc, char** argv)
 				messageQueue->WriteMessage(cmd[0], cmd.size() > 1 ? cmd[1] : "");
 			}
 
-			std::string type;
-			const char* buffer;
-			size_t size;
-
-			bool gotResult = messageQueue->GetReadBuffer(type, &buffer, &size, 1);
-			if(gotResult){
+			messageQueue->GetReadBuffer([&](const std::string& type, const char* buffer, size_t size){
 				FlogExpD(type);
 				auto sType = Tools::Split(type);
 				if(sType.size() == 2 && sType[0] == "results"){
@@ -53,9 +48,7 @@ int main(int argc, char** argv)
 				if(sType.size() == 3 && sType[0] == "error"){
 					FlogI("error from: " << sType[2] << ", code: " << sType[1] << ", message: " << std::string(buffer, size));
 				}
-		
-				messageQueue->ReturnReadBuffer(&buffer);
-			}
+			}, 1);
 		}
 	}
 
