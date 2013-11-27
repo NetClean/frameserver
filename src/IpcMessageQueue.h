@@ -2,6 +2,7 @@
 #define IPC_H
 
 #include <memory>
+#include <functional>
 #include "Macros.h"
 
 class IpcMessageQueue;
@@ -12,11 +13,12 @@ DefEx(IpcEx);
 class IpcMessageQueue
 {
 	public:
+	typedef std::function<void(const std::string& type, const char* buffer, size_t size)> ReadBufferFunc;
+	
 	virtual bool ReadMessage(std::string& type, std::string& message, int timeout = -1) = 0;
 	virtual bool WriteMessage(std::string type, std::string message, int timeout = -1) = 0;
 	
-	virtual bool GetReadBuffer(std::string& type, const char** out_buffer, size_t* out_size, int timeout = -1) = 0;
-	virtual void ReturnReadBuffer(const char** buffer) = 0;
+	virtual bool GetReadBuffer(ReadBufferFunc func, int timeout = -1) = 0;
 
 	virtual char* GetWriteBuffer(int timeout = -1) = 0;
 	virtual void ReturnWriteBuffer(std::string type, char** buffer, int len) = 0;

@@ -58,23 +58,26 @@ class CIpcMessageQueue : public IpcMessageQueue {
 		return (err == SHMIPC_ERR_SUCCESS);
 	}
 
-	bool GetReadBuffer(std::string& out_type, const char** out_buffer, size_t* out_size, int timeout){
+	bool GetReadBuffer(ReadBufferFunc func, int timeout = -1){
 		char type[SHMIPC_MESSAGE_TYPE_LENGTH]; 
-		auto err = shmipc_acquire_buffer_r(readQueue, type, out_buffer, out_size, timeout);
+
+		const char* buffer;
+		size_t size;
+
+		auto err = shmipc_acquire_buffer_r(readQueue, type, &buffer, &size, timeout);
 
 		AssertEx(err == SHMIPC_ERR_SUCCESS || err == SHMIPC_ERR_TIMEOUT, IpcEx, "failed to acquire read buffer");
 
 		if(err == SHMIPC_ERR_SUCCESS){
-			out_type.assign(type);
+			func(type, buffer, size);
+
+			auto err = shmipc_return_buffer_r(readQueue, &buffer);
+			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "failed to return read buffer");
+
 			return true;
 		}
 
 		return false;
-	}
-
-	void ReturnReadBuffer(const char** buffer){
-		auto err = shmipc_return_buffer_r(readQueue, buffer);
-		AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "failed to return read buffer");
 	}
 
 	char* GetWriteBuffer(int timeout){

@@ -97,43 +97,44 @@ class CPluginHandler : public PluginHandler
 			if(!plugin.started)
 				continue;
 
-			while(true){
-				std::string type;
-				const char* buffer;
-				size_t size;
+			bool done = false;
 
-				if(!plugin.messageQueue->GetReadBuffer(type, &buffer, &size, 30000)){
+			while(!done){
+				bool ret = plugin.messageQueue->GetReadBuffer([&](const std::string& type, const char* buffer, size_t size){
+					if(Tools::StartsWith(type, "results")){
+						// results message, relay to host
+						FlogD("relaying results from: " << plugin.executable);
+
+						char* outBuffer = hostQueue->GetWriteBuffer();
+						memcpy(outBuffer, buffer, size);
+						hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
+					}
+
+					else if(type == "status"){
+						// TODO actually check if the message says "ready"
+						// plugin is ready for next frame
+						done = true;
+					}
+
+					else{
+						// unexpected message
+						plugin.started = false;
+
+						if(Tools::StartsWith(type, "error")){
+							FlogD("relaying error from: " << plugin.executable);
+							hostQueue->WriteMessage(Str(type << " " << plugin.name), buffer);
+						}else{
+							FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
+						}
+						done = true;
+					}
+				}, 30000);
+					
+				if(!ret){
+					// timeout occured
 					hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing frames");
 					FlogW("timeout for plugin: " << plugin.name);
 					plugin.started = false;
-					break;
-				}
-
-				if(Tools::StartsWith(type, "results")){
-					// results message, relay to host
-					FlogD("relaying results from: " << plugin.executable);
-
-					char* outBuffer = hostQueue->GetWriteBuffer();
-					memcpy(outBuffer, buffer, size);
-					hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
-				}
-
-				else if(type == "status"){
-					// TODO actually check if the message says "ready"
-					// plugin is ready for next frame
-					break;
-				}
-
-				else{
-					// unexpected message
-					plugin.started = false;
-
-					if(Tools::StartsWith(type, "error")){
-						FlogD("relaying error from: " << plugin.executable);
-						hostQueue->WriteMessage(Str(type << " " << plugin.name), buffer);
-					}else{
-						FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
-					}
 					break;
 				}
 			}
