@@ -23,7 +23,7 @@ class CProgram : public Program {
 		
 		*((uint32_t*)frameShm->GetPtrRw() + 2) = totFrames;
 
-		pluginHandler->StartSession(frameShmName, platform);
+		pluginHandler->StartSession(frameShmName, platform, hostQueue);
 
 		int nFrames = 0;
 

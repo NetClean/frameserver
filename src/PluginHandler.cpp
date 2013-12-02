@@ -42,7 +42,7 @@ class CPluginHandler : public PluginHandler
 		}
 	}
 
-	void StartSession(const std::string& shmName, PlatformPtr platform){
+	void StartSession(const std::string& shmName, PlatformPtr platform, IpcMessageQueuePtr hostQueue){
 		for(auto& plugin : plugins){
 			try { 
 				std::string messageQueueName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
@@ -56,6 +56,7 @@ class CPluginHandler : public PluginHandler
 			} catch (PlatformEx e) {
 				FlogE("could not start plugin: " << plugin.executable << " because: " << e.GetMsg());
 				plugin.started = false;
+				hostQueue->WriteMessage(Str("error -1 " << plugin.name), "could not start process");
 			}
 		}
 	}
