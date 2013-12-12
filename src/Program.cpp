@@ -32,7 +32,6 @@ class CProgram : public Program {
 
 			*((uint32_t*)frameShm->GetPtrRw()) = frame->width;
 			*((uint32_t*)frameShm->GetPtrRw() + 1) = frame->height;
-			FlogExpD(totFrames);
 			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 
 			pluginHandler->Signal(PluginHandler::SignalNewFrame);

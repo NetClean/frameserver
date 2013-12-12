@@ -1,5 +1,6 @@
 #include "flog.h"
 #include <stdarg.h>
+#include <cstdio>
 
 int Flog_SeverityToIndex(Flog_Severity severity)
 {
@@ -30,5 +31,14 @@ void Flog_Log(const char* file, uint32_t lineNumber, Flog_Severity severity, con
 	va_end(fmtargs);
 	
 	printf("[%s] %s:%d %s\r\n", Flog_SeverityToString(severity), file, lineNumber, buffer);
+	
+	if(severity >= Flog_SVerbose){ 
+		FILE* logfile = fopen("frameserver.log", "a");
+		if(logfile){
+			fprintf(logfile, "[%s] %s:%d %s\r\n", Flog_SeverityToString(severity), file, lineNumber, buffer);
+			fclose(logfile);
+		}
+	}
+
 	fflush(stdout);
 }
