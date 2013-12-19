@@ -19,6 +19,13 @@ const char* Flog_SeverityToString(Flog_Severity severity)
 	return severityString[Flog_SeverityToIndex(severity)];
 }
 
+
+#ifdef DEBUG
+static const Flog_Severity logFileSeverity = Flog_SDebug3;
+#else
+static const Flog_Severity logFileSeverity = Flog_SVerbose;
+#endif
+
 void Flog_Log(const char* file, uint32_t lineNumber, Flog_Severity severity, const char* format, ...)
 {
 	va_list fmtargs;
@@ -32,7 +39,7 @@ void Flog_Log(const char* file, uint32_t lineNumber, Flog_Severity severity, con
 	
 	printf("[%s] %s:%d %s\r\n", Flog_SeverityToString(severity), file, lineNumber, buffer);
 	
-	if(severity >= Flog_SVerbose){ 
+	if(severity >= logFileSeverity){ 
 		FILE* logfile = fopen("frameserver.log", "a");
 		if(logfile){
 			fprintf(logfile, "[%s] %s:%d %s\r\n", Flog_SeverityToString(severity), file, lineNumber, buffer);

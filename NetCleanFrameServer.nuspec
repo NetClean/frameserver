@@ -8,7 +8,7 @@
     <description>NetClean FrameServer</description>
   </metadata>
   <files>
-    <file src="NetCleanFrameServer.exe" target="content/frameserver" />
-    <file src="plugins/test/*.*" target="content/frameserver/plugins/test" />
+    <file src="NetCleanFrameServer.exe" target="CopyToOutput/AnyCPU/frameserver" />
+    <file src="plugins/test/*.*" target="CopyToOutput/AnyCPU/frameserver/plugins/test" />
   </files>
 </package>

@@ -107,7 +107,7 @@ class CProgram : public Program {
 
 		catch (ExBase ex) {
 			FlogF("unhandled exception: " << ex.GetMsg());
-			platform->Sleep(5000);
+			platform->Sleep(5 * 1000);
 			return 1;
 		}
 

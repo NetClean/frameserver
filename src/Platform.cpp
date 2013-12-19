@@ -8,6 +8,19 @@
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
 
+class Win32Process : public Process {
+	public:
+	PROCESS_INFORMATION proc;
+
+	Win32Process(PROCESS_INFORMATION h){
+		this->proc = h;
+	}
+
+	bool IsRunning(){
+		return WaitForSingleObject(proc.hProcess, 0) == WAIT_TIMEOUT;
+	}
+};
+
 class Win32Platform : public Platform {
 	public:
 	HANDLE jobHandle;
@@ -65,7 +78,7 @@ class Win32Platform : public Platform {
 		return CombinePath({drive, dir});
 	}
 
-	void StartProcess(const std::string& executable, const StrVec& args, const std::string& directory)
+	ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory)
 	{
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
@@ -80,11 +93,14 @@ class Win32Platform : public Platform {
 
 		FlogD("starting process: " << executable);
 
-		char* cmdLine = strdup(Tools::Join({executable, Tools::Join(args)}).c_str());
+		char* cmdLine = strdup(Tools::Join({Str('"' << executable << '"'), Tools::Join(args)}).c_str());
+		FlogExpD(cmdLine);
 		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, directory.c_str(), &si, &pi); 
 		free(cmdLine);
 
 		AssertEx(err != 0, PlatformEx, "(CreateProcess) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");
+		
+		return ProcessPtr(new Win32Process(pi));
 	}
 };
 
