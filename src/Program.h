@@ -2,6 +2,7 @@
 #define PROGRAM_H
 
 #include <memory>
+#include <string>
 
 class Program;
 typedef std::shared_ptr<Program> ProgramPtr; 
@@ -9,7 +10,7 @@ typedef std::shared_ptr<Program> ProgramPtr;
 class Program 
 {
 	public:
-	virtual int Run(int argc, char** argv) = 0;
+	virtual int Run(std::string shmName) = 0;
 	static ProgramPtr Create();
 };
 

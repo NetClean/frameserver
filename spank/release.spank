@@ -1,4 +1,4 @@
 include spank/common.inc
-cflags           mwindows
+ldflags          mwindows
 postbuildscript  "$(host_dash)strip $(target)"
 postbuildscript  "echo built RELEASE version"

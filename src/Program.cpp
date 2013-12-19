@@ -49,14 +49,13 @@ class CProgram : public Program {
 		FlogD("decoded: " << nFrames << " frames...");
 	}
 
-	int Run(int argc, char** argv){
-		FlogAssert(argc == 2, "usage: " << argv[0] << " [shm name]");
+	int Run(std::string shmName){
 		PlatformPtr platform;
 
 		try { 
 	 		platform = Platform::Create();
 			bool done = false;
-			IpcMessageQueuePtr hostQueue = IpcMessageQueue::Open(argv[1]);
+			IpcMessageQueuePtr hostQueue = IpcMessageQueue::Open(shmName);
 			PluginHandlerPtr pluginHandler = PluginHandler::Create();
 
 			while(!done){
