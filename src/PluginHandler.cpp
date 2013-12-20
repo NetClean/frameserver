@@ -115,9 +115,14 @@ class CPluginHandler : public PluginHandler
 							// results message, relay to host
 							FlogD("relaying results from: " << plugin.executable);
 
-							char* outBuffer = hostQueue->GetWriteBuffer();
-							memcpy(outBuffer, buffer, size);
-							hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
+							if(hostQueue->GetWriteQueueSize() >= (int)size){
+								char* outBuffer = hostQueue->GetWriteBuffer();
+								memcpy(outBuffer, buffer, size);
+								hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
+							}else{
+								hostQueue->WriteMessage(Str("error 0 " << plugin.name), "result too big for frameserver/host message queue");
+								FlogW("result too big for frameserver/host message queue, plugin: " << plugin.executable << " " << plugin.name);
+							}
 
 							if(!waitReady)
 								done = true;

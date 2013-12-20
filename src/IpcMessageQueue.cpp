@@ -94,6 +94,14 @@ class CIpcMessageQueue : public IpcMessageQueue {
 		auto err = shmipc_return_buffer_w(writeQueue, buffer, len, type.c_str());
 		AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "failed to return read buffer");
 	}
+	
+	int GetReadQueueSize(){
+		return shmipc_get_buffer_size(readQueue);
+	}
+
+	int GetWriteQueueSize(){
+		return shmipc_get_buffer_size(writeQueue);
+	}
 
 	~CIpcMessageQueue(){
 		FlogD("destroying queue");
