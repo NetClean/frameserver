@@ -30,8 +30,12 @@ class CProgram : public Program {
 		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
 			pluginHandler->ProcessMessages(platform, hostQueue, true);
 
-			*((uint32_t*)frameShm->GetPtrRw()) = frame->width;
-			*((uint32_t*)frameShm->GetPtrRw() + 1) = frame->height;
+			char* at = (char*)frameShm->GetPtrRw();
+			*((uint32_t*)(at += sizeof(uint32_t))) = frame->width;
+			*((uint32_t*)(at += sizeof(uint32_t))) = frame->height;
+			*((uint32_t*)(at += sizeof(uint32_t))) = frame->flags;
+			*((int64_t*)(at += sizeof(int64_t))) = frame->bytePos;
+
 			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 
 			pluginHandler->Signal(PluginHandler::SignalNewFrame);

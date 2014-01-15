@@ -5,14 +5,19 @@
 class CVideo : public Video {
 	public:
 	vx_video* video;
+	vx_frame_info* frameInfo;
 
 	CVideo(const std::string& filename){
+		frameInfo = vx_fi_create();
+		AssertEx(frameInfo, VideoEx, "could not allocate memory for vx_frame_info object");
+		
 		auto err = vx_open(&video, filename.c_str());
 		AssertEx(err == VX_ERR_SUCCESS, VideoEx, "could not open video: '" << filename << "', because: " << vx_get_error_str(err));
 	}
 
 	~CVideo(){
 		FlogD("closing video");
+		vx_fi_destroy(frameInfo);
 		vx_close(video);
 	}
 
@@ -61,12 +66,16 @@ class CVideo : public Video {
 	}
 
 	bool GetFrame(int width, int height, PixelFormat fmt, FramePtr frame){
-		auto err = vx_get_frame(video, width, height, (vx_pix_fmt)fmt, frame->buffer);
+
+		auto err = vx_get_frame(video, width, height, (vx_pix_fmt)fmt, frame->buffer, frameInfo);
 
 		if(err == VX_ERR_EOF)
 			return false;
 
 		AssertEx(err == VX_ERR_SUCCESS, VideoEx, vx_get_error_str(err));
+		
+		frame->flags = vx_fi_get_flags(frameInfo);
+		frame->bytePos = vx_fi_get_byte_pos(frameInfo);
 
 		return true;
 	}

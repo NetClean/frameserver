@@ -5,6 +5,12 @@
 #include <memory>
 
 struct Frame {
+	enum Flags {
+		FKeyFrame = 1
+	};
+
+	unsigned int flags;
+	int64_t bytePos;
 	int width, height, bytesPerPixel;
 	uint8_t* buffer;
 };
