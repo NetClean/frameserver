@@ -12,6 +12,22 @@
 #include "RandChar.h"
 #include "IpcMessageQueue.h"
 
+#pragma pack(4)
+struct __attribute__ ((packed)) ShmVidInfo {
+	uint32_t reserved;
+	uint32_t width;
+	uint32_t height;
+	uint32_t flags;
+	int64_t bytePos;
+	int64_t pts;
+	int64_t dts;
+	
+	uint32_t totFrames;
+	float fps;
+	bool fpsGuessed;
+};
+#pragma pack() // restore packing
+
 class CProgram : public Program {
 	public:
 	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue, PluginHandlerPtr pluginHandler, PlatformPtr platform, int totFrames){
@@ -20,7 +36,27 @@ class CProgram : public Program {
 
 		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
 		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096);
+
+		FlogExpD(frameShmName);
 		
+		volatile ShmVidInfo* info = (ShmVidInfo*)frameShm->GetPtrRw();
+
+		info->totFrames = totFrames;
+
+		try {
+			info->fps = video->GetFrameRate();
+			info->fpsGuessed = false;
+		}
+
+		catch(VideoEx)
+		{
+			info->fps = 29.97;
+			info->fpsGuessed = true;
+		}
+
+		FlogExpD(info->fps);
+
+		FlogD("Starting session...");
 		pluginHandler->StartSession(frameShmName, platform, hostQueue);
 
 		int nFrames = 0;
@@ -28,16 +64,12 @@ class CProgram : public Program {
 		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
 			pluginHandler->ProcessMessages(platform, hostQueue, true);
 
-			char* at = (char*)frameShm->GetPtrRw();
-			*((uint32_t*)(at += sizeof(uint32_t)) = totFrames;
-			*((float*)(at += sizeof(float))) = video->GetFrameRate();
-
-			*((uint32_t*)(at += sizeof(uint32_t))) = frame->width;
-			*((uint32_t*)(at += sizeof(uint32_t))) = frame->height;
-			*((uint32_t*)(at += sizeof(uint32_t))) = frame->flags;
-			*((int64_t*)(at += sizeof(int64_t))) = frame->bytePos;
-			*((int64_t*)(at += sizeof(int64_t))) = frame->dts;
-			*((int64_t*)(at += sizeof(int64_t))) = frame->pts;
+			info->width = frame->width;
+			info->height = frame->height;
+			info->flags = frame->flags;
+			info->bytePos = frame->bytePos;
+			info->dts = frame->dts;
+			info->pts = frame->pts; 
 
 			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 
@@ -77,6 +109,7 @@ class CProgram : public Program {
 						RunPlugins(message, hostQueue, pluginHandler, platform, nFrames);
 						FlogExpD(nFrames);
 					} catch (VideoEx ex) {
+						FlogE("failed to run plugins: " << ex.GetMsg());
 						hostQueue->WriteMessage("video_error", ex.GetMsg());
 					}
 				}
