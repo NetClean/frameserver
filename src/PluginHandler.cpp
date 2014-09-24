@@ -50,6 +50,9 @@ class CPluginHandler : public PluginHandler
 				FlogExpD(messageQueueName);
 				plugin.messageQueue = IpcMessageQueue::Create(messageQueueName, 2, 1024 * 1024 * 32, 4, 1024 * 16);
 
+				//std::string gdb = "z:\\opt\\toolchains\\mingw32-dwarf-posix\\bin\\gdb.exe";
+
+				//plugin.process = platform->StartProcess(gdb, {"--args", plugin.executable, messageQueueName, shmName}, plugin.directory);
 				plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory);
 				plugin.started = true;
 
@@ -121,7 +124,7 @@ class CPluginHandler : public PluginHandler
 								hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
 							}else{
 								hostQueue->WriteMessage(Str("error 0 " << plugin.name), "result too big for frameserver/host message queue");
-								FlogW("result too big for frameserver/host message queue, plugin: " << plugin.executable << " " << plugin.name);
+								FlogW("result too big for frameserver/host message queue (" << size << "), plugin: " << plugin.executable << " " << plugin.name);
 							}
 
 							if(!waitReady)

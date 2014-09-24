@@ -43,6 +43,11 @@ int main(int argc, char** argv)
 					if(sType[1] == "video-collage"){
 						writeBuffer("collage.data", buffer, size);
 					}
+
+					if(sType[1] == "interesting-frames"){
+						for(int i = 0; i < (int)size / (int)sizeof(float); i++)
+							FlogExpD(((float*)buffer)[i]);
+					}
 				}
 
 				if(sType.size() == 3 && sType[0] == "error"){

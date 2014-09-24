@@ -21,8 +21,6 @@ class CProgram : public Program {
 		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
 		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096);
 		
-		*((uint32_t*)frameShm->GetPtrRw() + 2) = totFrames;
-
 		pluginHandler->StartSession(frameShmName, platform, hostQueue);
 
 		int nFrames = 0;
@@ -31,10 +29,15 @@ class CProgram : public Program {
 			pluginHandler->ProcessMessages(platform, hostQueue, true);
 
 			char* at = (char*)frameShm->GetPtrRw();
+			*((uint32_t*)(at += sizeof(uint32_t)) = totFrames;
+			*((float*)(at += sizeof(float))) = video->GetFrameRate();
+
 			*((uint32_t*)(at += sizeof(uint32_t))) = frame->width;
 			*((uint32_t*)(at += sizeof(uint32_t))) = frame->height;
 			*((uint32_t*)(at += sizeof(uint32_t))) = frame->flags;
 			*((int64_t*)(at += sizeof(int64_t))) = frame->bytePos;
+			*((int64_t*)(at += sizeof(int64_t))) = frame->dts;
+			*((int64_t*)(at += sizeof(int64_t))) = frame->pts;
 
 			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 

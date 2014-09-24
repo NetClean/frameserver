@@ -76,6 +76,8 @@ class CVideo : public Video {
 		
 		frame->flags = vx_fi_get_flags(frameInfo);
 		frame->bytePos = vx_fi_get_byte_pos(frameInfo);
+		frame->dts = vx_fi_get_dts(frameInfo);
+		frame->pts = vx_fi_get_pts(frameInfo);
 
 		return true;
 	}

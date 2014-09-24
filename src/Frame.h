@@ -10,7 +10,7 @@ struct Frame {
 	};
 
 	unsigned int flags;
-	int64_t bytePos;
+	int64_t bytePos, dts, pts;
 	int width, height, bytesPerPixel;
 	uint8_t* buffer;
 };
