@@ -44,6 +44,10 @@ int main(int argc, char** argv)
 						writeBuffer("collage.data", buffer, size);
 					}
 
+					if(sType[1] == "videntifier"){
+						writeBuffer("description.desc72", buffer, size);
+					}
+
 					if(sType[1] == "interesting-frames"){
 						for(int i = 0; i < (int)size / (int)sizeof(float); i++)
 							FlogExpD(((float*)buffer)[i]);
