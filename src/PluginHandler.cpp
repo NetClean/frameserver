@@ -77,8 +77,13 @@ class CPluginHandler : public PluginHandler
 			FlogE("no such plugin enabled: " << pluginName);
 	}
 
-	void EndSession(){
+	void EndSession(int timeout){
 		for(auto& plugin : plugins){
+			// Wait [timeout] ms for processes to exit. If not, kill it.
+			if(plugin.process->Wait(timeout)){
+				plugin.process->Kill();
+			}
+			
 			plugin.started = false;
 			plugin.messageQueue = 0;
 		}

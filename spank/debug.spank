@@ -1,4 +1,0 @@
-include spank/common.inc
-cflags           g DDEBUG
-ldflags          mconsole
-postbuildscript  "echo built DEBUG version"

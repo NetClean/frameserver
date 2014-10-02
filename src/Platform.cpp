@@ -19,6 +19,16 @@ class Win32Process : public Process {
 	bool IsRunning(){
 		return WaitForSingleObject(proc.hProcess, 0) == WAIT_TIMEOUT;
 	}
+	
+	bool Wait(int msTimeout)
+	{
+		return WaitForSingleObject(proc.hProcess, msTimeout) != WAIT_TIMEOUT;
+	}
+	
+	void Kill()
+	{
+		TerminateProcess(proc.hProcess, 100);
+	}
 };
 
 class Win32Platform : public Platform {

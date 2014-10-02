@@ -1,0 +1,23 @@
+[common]
+template            c++11
+name                NetCleanFrameServer
+sourcedir           src
+cflags              std=c++0x Wall static
+
+ldflags             static static-libgcc static-libstdc++ 
+#ldflags             Wl,--enable-auto-image-base
+#ldflags             Wl,--add-stdcall-alias Wl,--enable-auto-import
+ldflags             Wl,-Bstatic
+
+target_platform     mingw32
+lib-static          libvx libshmipc
+
+[*debug: common]
+cflags              g DDEBUG
+ldflags             mconsole
+postbuildscript     "echo built DEBUG version"
+
+[release: common]
+ldflags             mwindows
+postbuildscript     "$(host_dash)strip $(target)"
+postbuildscript     "echo built RELEASE version"

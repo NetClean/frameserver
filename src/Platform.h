@@ -13,6 +13,8 @@ typedef std::shared_ptr<Platform> PlatformPtr;
 class Process {
 	public:
 	virtual bool IsRunning() = 0;
+	virtual bool Wait(int msTimeout = -1) = 0;
+	virtual void Kill() = 0;
 };
 
 typedef std::shared_ptr<Process> ProcessPtr;

@@ -41,7 +41,8 @@ class CSharedMem : public SharedMem {
 
 	~CSharedMem(){
 		FlogD("destroying shm area");
-		shmipc_destroy_shm(&handle);
+		if(handle)
+			shmipc_destroy_shm(&handle);
 	}
 
 	size_t GetSize(){
