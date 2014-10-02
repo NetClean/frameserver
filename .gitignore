@@ -3,4 +3,8 @@
 *.avi
 *.nupkg
 *.mp4
+*.log
+*.json
+*.desc72
+*.data
 clips
