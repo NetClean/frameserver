@@ -53,7 +53,9 @@ class CPluginHandler : public PluginHandler
 				//std::string gdb = "z:\\opt\\toolchains\\mingw32-dwarf-posix\\bin\\gdb.exe";
 
 				//plugin.process = platform->StartProcess(gdb, {"--args", plugin.executable, messageQueueName, shmName}, plugin.directory);
-				plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory);
+				plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, true);
+				plugin.process->InjectDll(platform->CombinePath({platform->GetWorkingDirectory(), "plugins", "videosdk.dll"}));
+				plugin.process->Resume();
 				plugin.started = true;
 
 				SendArguments(plugin);

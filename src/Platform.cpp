@@ -29,6 +29,34 @@ class Win32Process : public Process {
 	{
 		TerminateProcess(proc.hProcess, 100);
 	}
+	
+	void InjectDll(const std::string& path, int timeout)
+	{
+		LPVOID pszDllPathRemote = VirtualAllocEx(proc.hProcess, NULL, path.size(), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+		WriteProcessMemory(proc.hProcess, pszDllPathRemote, (LPVOID)path.c_str(), path.size(), NULL);
+
+		HANDLE hThread = CreateRemoteThread(proc.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)
+				GetProcAddress(GetModuleHandle("Kernel32"), "LoadLibraryA"), pszDllPathRemote, 0, NULL);
+
+		DWORD ret = WaitForSingleObject(hThread, timeout);
+		if(ret != 0)
+			throw PlatformEx(Str("failed to wait for remote thread when injecting dll: " << path << ", error: " << ret));
+
+		HMODULE hLibModule;
+		GetExitCodeThread(hThread, (DWORD*)&hLibModule);
+		CloseHandle(hThread);
+
+		VirtualFreeEx(proc.hProcess, pszDllPathRemote, path.size(), MEM_RELEASE);
+
+		if(!hLibModule)
+			throw PlatformEx(Str("could not inject dll: " << path));
+	}
+
+	void Resume()
+	{
+		ResumeThread(proc.hThread);
+	}
 };
 
 class Win32Platform : public Platform {
@@ -88,7 +116,7 @@ class Win32Platform : public Platform {
 		return CombinePath({drive, dir});
 	}
 
-	ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory)
+	ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory, bool startPaused)
 	{
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
@@ -105,7 +133,7 @@ class Win32Platform : public Platform {
 
 		char* cmdLine = strdup(Tools::Join({Str('"' << executable << '"'), Tools::Join(args)}).c_str());
 		FlogExpD(cmdLine);
-		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, directory.c_str(), &si, &pi); 
+		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW | (startPaused ? CREATE_SUSPENDED : 0), NULL, directory.c_str(), &si, &pi); 
 		free(cmdLine);
 
 		AssertEx(err != 0, PlatformEx, "(CreateProcess) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");

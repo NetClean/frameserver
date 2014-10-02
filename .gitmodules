@@ -1,0 +1,3 @@
+[submodule "frameserver_sdk"]
+	path = frameserver_sdk
+	url = git@github.com:noname22/frameserver_sdk.git

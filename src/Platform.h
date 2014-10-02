@@ -15,6 +15,8 @@ class Process {
 	virtual bool IsRunning() = 0;
 	virtual bool Wait(int msTimeout = -1) = 0;
 	virtual void Kill() = 0;
+	virtual void InjectDll(const std::string& path, int timeout = 10000) = 0;
+	virtual void Resume() = 0;
 };
 
 typedef std::shared_ptr<Process> ProcessPtr;
@@ -22,7 +24,7 @@ typedef std::shared_ptr<Process> ProcessPtr;
 class Platform {
 	public:
 	virtual void Sleep(int ms) = 0;
-	virtual ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory) = 0;
+	virtual ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory, bool startPaused = false) = 0;
 	virtual std::string GetWorkingDirectory() = 0;
 	virtual std::string CombinePath(const StrVec& paths) = 0;
 
