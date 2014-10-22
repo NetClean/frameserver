@@ -2,12 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>NetCleanFrameServer</id>
-    <version>1.0.0.4</version>
+    <version>1.0.0.5</version>
     <authors>Fredrik Hultin</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>NetClean FrameServer</description>
   </metadata>
   <files>
+		<file src="dummy.txt" target="lib" /> <!-- required for nuget to do anything -->
     <file src="NetCleanFrameServer.exe" target="CopyToOutput/always/frameserver" />
     <file src="plugins/test/*.*" target="CopyToOutput/always/frameserver/plugins/test" />
   </files>
