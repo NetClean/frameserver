@@ -78,6 +78,7 @@ class CProgram : public Program {
 			nFrames++;
 		}
 		
+		FlogD("process last messages");
 		pluginHandler->Signal(PluginHandler::SignalQuit);
 		pluginHandler->ProcessMessages(platform, hostQueue, false);
 
@@ -146,7 +147,9 @@ class CProgram : public Program {
 
 		catch (ExBase ex) {
 			FlogF("unhandled exception: " << ex.GetMsg());
+			#ifdef DEBUG
 			platform->Sleep(5 * 1000);
+			#endif
 			return 1;
 		}
 

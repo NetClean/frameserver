@@ -117,13 +117,17 @@ class CPluginHandler : public PluginHandler
 				int deadSincePeriods = 0;
 				
 				for(int i = 0; i < timeout / period; i++){
-					if(i > period * 10)
+					if(i > 10)
 						FlogW("waiting for slow plugin: " << plugin.executable);
 
 					ret = plugin.messageQueue->GetReadBuffer([&](const std::string& type, const char* buffer, size_t size){
 						if(Tools::StartsWith(type, "results")){
 							// results message, relay to host
 							FlogD("relaying results from: " << plugin.executable);
+
+							if(size > 0){
+								FlogD("message starts with: " << (unsigned)buffer[0]);
+							}
 
 							if(hostQueue->GetWriteQueueSize() >= (int)size){
 								char* outBuffer = hostQueue->GetWriteBuffer();
@@ -133,9 +137,6 @@ class CPluginHandler : public PluginHandler
 								hostQueue->WriteMessage(Str("error 0 " << plugin.name), "result too big for frameserver/host message queue");
 								FlogW("result too big for frameserver/host message queue (" << size << "), plugin: " << plugin.executable << " " << plugin.name);
 							}
-
-							if(!waitReady)
-								done = true;
 						}
 
 						else if(type == "status"){
@@ -161,20 +162,32 @@ class CPluginHandler : public PluginHandler
 						}
 					}, period);
 
-					// The deadSincePeriods counter exists to prevent a race condition where the frameserver queue read times out
-					// because the plugin has acquired a buffer for writing a result. If the plugin then manages to terminate
-					// before the process->IsRunning check in the frameserver, the reported result (or other message) would be ignored.
+					if(!ret){
+						// The deadSincePeriods counter exists to prevent a race condition where the frameserver queue read times out
+						// because the plugin has acquired a buffer for writing a result. If the plugin then manages to terminate
+						// before the process->IsRunning check in the frameserver, the reported result (or other message) would be ignored.
 
-					// If the process has been dead the last 10 periods (1 is probably enough) we can safely assume that there are no
-					// result messages in the queue waiting for us, and since the plugin process is dead, we can exit the loop.
+						// If the process has been dead the last 10 periods (1 is probably enough) we can safely assume that there are no
+						// result messages in the queue waiting for us, and since the plugin process is dead, we can exit the loop.
 
-					deadSincePeriods += plugin.process->IsRunning() ? 0 : 1;
-					isRunning = deadSincePeriods < 10;
+						deadSincePeriods += plugin.process->IsRunning() ? 0 : 1;
+						isRunning = deadSincePeriods < 10;
 
-					if(ret || !isRunning)
+						if(!isRunning){
+							break;
+						}
+
+						// message queue is empty and we don't wait for ready state -> done and break
+						if(!waitReady){
+							done = true;
+							break;
+						}
+					}
+
+					// success -> exit retry loop
+					if(ret)
 						break;
 				}
-
 
 				if(!isRunning){
 					// process exited
@@ -185,7 +198,7 @@ class CPluginHandler : public PluginHandler
 					break;
 				}
 
-				else if(!ret){
+				if(!done && !ret){
 					// timeout occured
 					hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing frames");
 					FlogW("timeout, plugin: " << plugin.executable << " " << plugin.name);
