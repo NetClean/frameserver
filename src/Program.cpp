@@ -34,7 +34,7 @@ class CProgram : public Program {
 		VideoPtr video = Video::Create(videoFile);
 		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
 
-		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
+		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create(platform));
 		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096);
 
 		FlogExpD(frameShmName);

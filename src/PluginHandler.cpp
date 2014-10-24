@@ -46,7 +46,7 @@ class CPluginHandler : public PluginHandler
 	void StartSession(const std::string& shmName, PlatformPtr platform, IpcMessageQueuePtr hostQueue){
 		for(auto& plugin : plugins){
 			try { 
-				std::string messageQueueName = UuidGenerator::Create()->GenerateUuid(RandChar::Create());
+				std::string messageQueueName = UuidGenerator::Create()->GenerateUuid(RandChar::Create(platform));
 				FlogExpD(messageQueueName);
 				plugin.messageQueue = IpcMessageQueue::Create(messageQueueName, 2, 1024 * 1024 * 32, 4, 1024 * 16);
 

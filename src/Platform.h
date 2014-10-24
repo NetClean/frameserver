@@ -27,6 +27,7 @@ class Platform {
 	virtual ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory, bool startPaused = false) = 0;
 	virtual std::string GetWorkingDirectory() = 0;
 	virtual std::string CombinePath(const StrVec& paths) = 0;
+	virtual void GetRandChars(char* buffer, int len) = 0;
 
 	static PlatformPtr Create();
 };

@@ -1,25 +1,20 @@
 #include "RandChar.h"
-#include <cstdlib>
-#include <ctime>
+#include "Platform.h"
 
 class CRandChar : public RandChar {
 	public:
-	static bool hasInit;
-	CRandChar(){
-		if(!hasInit)
-			srand(time(0));
-		hasInit = true;
+	PlatformPtr p;
+	CRandChar(PlatformPtr p) : p(p)
+	{
 	}
 
-	void Generate(char* buffer, int length){
-		for(int i = 0; i < length; i++)
-			buffer[i] = rand();
+	void Generate(char* buffer, int length)
+	{
+		p->GetRandChars(buffer, length);
 	}
 };
 
-bool CRandChar::hasInit = false;
-
-RandChar* RandChar::Create()
+RandChar* RandChar::Create(PlatformPtr p)
 {
-	return new CRandChar();
+	return new CRandChar(p);
 }

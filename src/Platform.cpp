@@ -4,8 +4,8 @@
 
 #include "flog.h"
 
-#define WIN32_LEAN_AND_MEAN
-#define WIN32_EXTRA_LEAN
+//#define WIN32_LEAN_AND_MEAN
+//#define WIN32_EXTRA_LEAN
 #include <windows.h>
 
 class Win32Process : public Process {
@@ -139,6 +139,23 @@ class Win32Platform : public Platform {
 		AssertEx(err != 0, PlatformEx, "(CreateProcess) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");
 		
 		return ProcessPtr(new Win32Process(pi));
+	}
+
+	
+	virtual void GetRandChars(char* buffer, int len)
+	{
+		HCRYPTPROV hProvider = 0;
+
+		if (!::CryptAcquireContext(&hProvider, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)){
+			throw PlatformEx("CryptAcquireContext failed");
+		}
+
+		if (!::CryptGenRandom(hProvider, len, (BYTE*)buffer)){
+			::CryptReleaseContext(hProvider, 0);
+			throw PlatformEx("CryptGenRandom failed");
+		}
+
+		CryptReleaseContext(hProvider, 0);
 	}
 };
 
