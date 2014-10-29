@@ -62,7 +62,7 @@ class CProgram : public Program {
 		int nFrames = 0;
 
 		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
-			pluginHandler->ProcessMessages(platform, hostQueue, true);
+			pluginHandler->ProcessMessages(platform, hostQueue, false);
 
 			info->width = frame->width;
 			info->height = frame->height;
@@ -78,10 +78,11 @@ class CProgram : public Program {
 			nFrames++;
 		}
 		
-		FlogD("process last messages");
-		pluginHandler->Signal(PluginHandler::SignalQuit);
-		pluginHandler->ProcessMessages(platform, hostQueue, false);
+		FlogD("end session and process last messages");
+		pluginHandler->Signal(PluginHandler::SignalEndSession);
+		pluginHandler->ProcessMessages(platform, hostQueue, true);
 
+		pluginHandler->Signal(PluginHandler::SignalQuit);
 		pluginHandler->EndSession();
 
 		hostQueue->WriteMessage("done", "");

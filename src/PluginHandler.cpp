@@ -16,6 +16,7 @@ struct Plugin
 	IpcMessageQueuePtr messageQueue;
 	ProcessPtr process;
 	bool started;
+	bool finished;
 };
 
 class CPluginHandler : public PluginHandler 
@@ -57,6 +58,7 @@ class CPluginHandler : public PluginHandler
 				plugin.process->InjectDll(platform->CombinePath({platform->GetWorkingDirectory(), "plugins", "videosdk.dll"}));
 				plugin.process->Resume();
 				plugin.started = true;
+				plugin.finished = false;
 
 				SendArguments(plugin);
 			} catch (PlatformEx e) {
@@ -93,7 +95,7 @@ class CPluginHandler : public PluginHandler
 
 	void Signal(SignalType signal){
 		// TODO timeout
-		static std::string sigs[] = {"newframe", "quit"};
+		static std::string sigs[] = {"newframe", "endsession", "quit"};
 		for(auto plugin : plugins){
 			if(!plugin.started || !plugin.process->IsRunning())
 				continue;
@@ -103,104 +105,85 @@ class CPluginHandler : public PluginHandler
 		}
 	}
 
-	void ProcessMessages(PlatformPtr platform, IpcMessageQueuePtr hostQueue, bool waitReady, int timeout){
+	void ProcessMessages(PlatformPtr platform, IpcMessageQueuePtr hostQueue, bool expectFinished, int timeout){
 		for(auto& plugin : plugins){
-			if(!plugin.started)
+			if(!plugin.started || plugin.finished)
 				continue;
+				
+			if(!plugin.process->IsRunning()){
+				// process exited
+				hostQueue->WriteMessage(Str("error 0 " << plugin.name), "process exited");
+				FlogW("process exited, plugin: " << plugin.executable << " " << plugin.name);
+
+				plugin.started = false;
+				break;
+			}
 		
 			bool done = false;
 
 			while(!done){
-				bool ret = false;
-				bool isRunning = true; // = false;
-				const int period = 100;
-				int deadSincePeriods = 0;
-				
-				for(int i = 0; i < timeout / period; i++){
-					if(i > 10)
-						FlogW("waiting for slow plugin: " << plugin.executable);
+				bool ret = plugin.messageQueue->GetReadBuffer([&](const std::string& type, const char* buffer, size_t size){
+					if(Tools::StartsWith(type, "results")){
+						// results message, relay to host
+						FlogD("relaying results from: " << plugin.executable);
 
-					ret = plugin.messageQueue->GetReadBuffer([&](const std::string& type, const char* buffer, size_t size){
-						if(Tools::StartsWith(type, "results")){
-							// results message, relay to host
-							FlogD("relaying results from: " << plugin.executable);
-
-							if(size > 0){
-								FlogD("message starts with: " << (unsigned)buffer[0]);
-							}
-
-							if(hostQueue->GetWriteQueueSize() >= (int)size){
-								char* outBuffer = hostQueue->GetWriteBuffer();
-								memcpy(outBuffer, buffer, size);
-								hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
-							}else{
-								hostQueue->WriteMessage(Str("error 0 " << plugin.name), "result too big for frameserver/host message queue");
-								FlogW("result too big for frameserver/host message queue (" << size << "), plugin: " << plugin.executable << " " << plugin.name);
-							}
+						if(size > 0){
+							FlogD("message starts with: " << (unsigned)buffer[0]);
 						}
 
-						else if(type == "status"){
-							// plugin is ready for next frame
-							// TODO actually check if the message says "ready"
-							if(waitReady)
-								done = true;
-						}
-
-						else if(Tools::StartsWith(type, "error")){
-							// error
-							FlogD("relaying error from: " << plugin.executable);
-							done = true;
-							plugin.started = false;
-							hostQueue->WriteMessage(Str(type << " " << plugin.name), buffer);
-						}
-						
-						else{
-							// unknown
-							FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
-							done = true;
-							plugin.started = false;
-						}
-					}, period);
-
-					if(!ret){
-						// The deadSincePeriods counter exists to prevent a race condition where the frameserver queue read times out
-						// because the plugin has acquired a buffer for writing a result. If the plugin then manages to terminate
-						// before the process->IsRunning check in the frameserver, the reported result (or other message) would be ignored.
-
-						// If the process has been dead the last 10 periods (1 is probably enough) we can safely assume that there are no
-						// result messages in the queue waiting for us, and since the plugin process is dead, we can exit the loop.
-
-						deadSincePeriods += plugin.process->IsRunning() ? 0 : 1;
-						isRunning = deadSincePeriods < 10;
-
-						if(!isRunning){
-							break;
-						}
-
-						// message queue is empty and we don't wait for ready state -> done and break
-						if(!waitReady){
-							done = true;
-							break;
+						if(hostQueue->GetWriteQueueSize() >= (int)size){
+							char* outBuffer = hostQueue->GetWriteBuffer();
+							memcpy(outBuffer, buffer, size);
+							hostQueue->ReturnWriteBuffer(Str(type << " " << plugin.name), &outBuffer, size);
+						}else{
+							hostQueue->WriteMessage(Str("error 0 " << plugin.name), "result too big for frameserver/host message queue");
+							FlogW("result too big for frameserver/host message queue (" << size << "), plugin: " << plugin.executable << " " << plugin.name);
 						}
 					}
 
-					// success -> exit retry loop
-					if(ret)
-						break;
-				}
+					else if(type == "status" && std::string(buffer) == "ready"){
+						// plugin is ready for next frame
 
-				if(!isRunning){
-					// process exited
-					hostQueue->WriteMessage(Str("error 0 " << plugin.name), "process exited");
-					FlogW("process exited, plugin: " << plugin.executable << " " << plugin.name);
+						if(!expectFinished){
+							done = true;
+							//FlogD("ready");
+						}
+						else{
+							FlogD("(ignoring ready)");
+						}
+					}
 
-					plugin.started = false;
-					break;
-				}
+					else if(type == "status" && std::string(buffer) == "finished"){
+						// plugin is finished with file/session
 
-				if(!done && !ret){
+						if(expectFinished){
+							plugin.finished = true;
+							done = true;
+							FlogD("finished");
+						}else{
+							FlogD("(ignoring finished)");
+						}
+					}
+
+					else if(Tools::StartsWith(type, "error")){
+						// error
+						FlogD("relaying error from: " << plugin.executable);
+						done = true;
+						plugin.started = false;
+						hostQueue->WriteMessage(Str(type << " " << plugin.name), buffer);
+					}
+					
+					else{
+						// unknown
+						FlogW("unknown message type: " << type << " from plugin: " << plugin.name);
+						done = true;
+						plugin.started = false;
+					}
+				}, timeout);
+
+				if(!ret){
 					// timeout occured
-					hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing frames");
+					hostQueue->WriteMessage(Str("error 0 " << plugin.name), "timeout while processing frames/waiting for result");
 					FlogW("timeout, plugin: " << plugin.executable << " " << plugin.name);
 
 					plugin.started = false;
