@@ -64,6 +64,9 @@ class Win32Platform : public Platform {
 	HANDLE jobHandle;
 
 	Win32Platform(){
+		// SetErrorMode to never displaying any popup windows. Should propagate to child processes.
+		SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
+
 		// Create a job object with limits that kill the subprocesses on exit
 		jobHandle = CreateJobObject(NULL, NULL);
 		AssertEx(jobHandle != 0, PlatformEx, "(CreateJobObject) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");

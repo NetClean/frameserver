@@ -52,11 +52,13 @@ class CPluginHandler : public PluginHandler
 				plugin.messageQueue = IpcMessageQueue::Create(messageQueueName, 2, 1024 * 1024 * 32, 4, 1024 * 16);
 
 				//std::string gdb = "z:\\opt\\toolchains\\mingw32-dwarf-posix\\bin\\gdb.exe";
-
 				//plugin.process = platform->StartProcess(gdb, {"--args", plugin.executable, messageQueueName, shmName}, plugin.directory);
-				plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, true);
-				plugin.process->InjectDll(platform->CombinePath({platform->GetWorkingDirectory(), "plugins", "videosdk.dll"}));
-				plugin.process->Resume();
+
+				plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, false);
+
+				//plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, true);
+				//plugin.process->InjectDll(platform->CombinePath({platform->GetWorkingDirectory(), "plugins", "videosdk.dll"}));
+				//plugin.process->Resume();
 				plugin.started = true;
 				plugin.finished = false;
 
@@ -123,6 +125,7 @@ class CPluginHandler : public PluginHandler
 
 			while(!done){
 				bool ret = plugin.messageQueue->GetReadBuffer([&](const std::string& type, const char* buffer, size_t size){
+					//FlogD("waiting");
 					if(Tools::StartsWith(type, "results")){
 						// results message, relay to host
 						FlogD("relaying results from: " << plugin.executable);
