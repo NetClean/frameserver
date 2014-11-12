@@ -17,6 +17,7 @@ struct Plugin
 	ProcessPtr process;
 	bool started;
 	bool finished;
+	bool debug;
 };
 
 class CPluginHandler : public PluginHandler 
@@ -24,12 +25,13 @@ class CPluginHandler : public PluginHandler
 	public:
 	std::vector<Plugin> plugins;
 
-	void AddPlugin(const std::string& name, const std::string& executable, const std::string& directory){
+	void AddPlugin(const std::string& name, const std::string& executable, const std::string& directory, bool debug){
 		Plugin plugin;
 
 		plugin.name = name;
 		plugin.executable = executable;
 		plugin.directory = directory;
+		plugin.debug = debug;
 
 		plugins.push_back(plugin);
 	}
@@ -51,14 +53,19 @@ class CPluginHandler : public PluginHandler
 				FlogExpD(messageQueueName);
 				plugin.messageQueue = IpcMessageQueue::Create(messageQueueName, 2, 1024 * 1024 * 32, 4, 1024 * 16);
 
-				//std::string gdb = "z:\\opt\\toolchains\\mingw32-dwarf-posix\\bin\\gdb.exe";
-				//plugin.process = platform->StartProcess(gdb, {"--args", plugin.executable, messageQueueName, shmName}, plugin.directory);
+				if(plugin.debug){
+					std::string gdb = "gdb.exe";
+					plugin.process = platform->StartProcess(gdb, {"--args", plugin.executable, messageQueueName, shmName}, plugin.directory, false, true);
+				}
 
-				plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, false);
+				else {
+					plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, false, false);
+				}
 
 				//plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, true);
 				//plugin.process->InjectDll(platform->CombinePath({platform->GetWorkingDirectory(), "plugins", "videosdk.dll"}));
 				//plugin.process->Resume();
+
 				plugin.started = true;
 				plugin.finished = false;
 
@@ -86,7 +93,7 @@ class CPluginHandler : public PluginHandler
 	void EndSession(int timeout){
 		for(auto& plugin : plugins){
 			// Wait [timeout] ms for processes to exit. If not, kill it.
-			if(plugin.process->Wait(timeout)){
+			if(plugin.process->Wait(plugin.debug ? -1 : timeout)){
 				plugin.process->Kill();
 			}
 			
@@ -182,7 +189,7 @@ class CPluginHandler : public PluginHandler
 						done = true;
 						plugin.started = false;
 					}
-				}, timeout);
+				}, plugin.debug ? -1 : timeout);
 
 				if(!ret){
 					// timeout occured

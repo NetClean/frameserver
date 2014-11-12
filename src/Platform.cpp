@@ -119,7 +119,7 @@ class Win32Platform : public Platform {
 		return CombinePath({drive, dir});
 	}
 
-	ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory, bool startPaused)
+	ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory, bool startPaused, bool showWindow)
 	{
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
@@ -136,7 +136,10 @@ class Win32Platform : public Platform {
 
 		char* cmdLine = strdup(Tools::Join({Str('"' << executable << '"'), Tools::Join(args)}).c_str());
 		FlogExpD(cmdLine);
-		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW | (startPaused ? CREATE_SUSPENDED : 0), NULL, directory.c_str(), &si, &pi); 
+		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE,
+			(showWindow ? 0 : CREATE_NO_WINDOW) | (startPaused ? CREATE_SUSPENDED : 0),
+			NULL, directory.c_str(), &si, &pi);
+
 		free(cmdLine);
 
 		AssertEx(err != 0, PlatformEx, "(CreateProcess) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");

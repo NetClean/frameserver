@@ -28,7 +28,7 @@ class CIpcMessageQueue : public IpcMessageQueue {
 			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not open writer");
 
 			err = shmipc_open(readName.c_str(), SHMIPC_AM_READ, &readQueue);
-			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not open writer");
+			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not open reader");
 		}
 	}
 

@@ -118,11 +118,12 @@ class CProgram : public Program {
 
 				else if(type == "enable"){
 					auto vec = Tools::Split(message);
-					if(vec.size() == 2){
+					if(vec.size() == 2 || vec.size() == 3){
 						std::string dir = platform->CombinePath({platform->GetWorkingDirectory(), "plugins"});
-						pluginHandler->AddPlugin(vec[0], platform->CombinePath({dir, vec[1], Str(vec[1] << ".exe")}), dir);
+						bool debug = vec.size() == 3 && vec[2] == "debug";
+						pluginHandler->AddPlugin(vec[0], platform->CombinePath({dir, vec[1], Str(vec[1] << ".exe")}), dir, debug);
 					}else{
-						FlogE("enable expects 2 arguments (handle and plugin name)");
+						FlogE("enable expects 2 or 3 arguments (handle and plugin name (debug))");
 					}
 				}
 
