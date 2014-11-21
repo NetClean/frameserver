@@ -93,7 +93,7 @@ class CPluginHandler : public PluginHandler
 	void EndSession(int timeout){
 		for(auto& plugin : plugins){
 			// Wait [timeout] ms for processes to exit. If not, kill it.
-			if(plugin.process->Wait(plugin.debug ? -1 : timeout)){
+			if(plugin.started && plugin.process->Wait(plugin.debug ? -1 : timeout)){
 				plugin.process->Kill();
 			}
 			

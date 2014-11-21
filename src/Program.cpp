@@ -35,7 +35,13 @@ class CProgram : public Program {
 		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
 
 		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create(platform));
-		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096);
+
+		// shared memory area layout:
+		//   4096 byte reserved for header
+		//   frame
+		//   4096 padding as a workaround for a bug in swscale (?) where it overreads the buffer
+
+		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096 + 4096);
 
 		FlogExpD(frameShmName);
 		
