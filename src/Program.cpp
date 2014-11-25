@@ -83,6 +83,9 @@ class CProgram : public Program {
 
 			nFrames++;
 		}
+
+		if(nFrames == 0)
+			throw VideoEx("no frames in video");
 		
 		FlogD("end session and process last messages");
 		pluginHandler->Signal(PluginHandler::SignalEndSession);
