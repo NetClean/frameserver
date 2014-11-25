@@ -67,21 +67,28 @@ class CProgram : public Program {
 
 		int nFrames = 0;
 
-		while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
-			pluginHandler->ProcessMessages(platform, hostQueue, false);
+		try {
+			while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
+				pluginHandler->ProcessMessages(platform, hostQueue, false);
 
-			info->width = frame->width;
-			info->height = frame->height;
-			info->flags = frame->flags;
-			info->bytePos = frame->bytePos;
-			info->dts = frame->dts;
-			info->pts = frame->pts; 
+				info->width = frame->width;
+				info->height = frame->height;
+				info->flags = frame->flags;
+				info->bytePos = frame->bytePos;
+				info->dts = frame->dts;
+				info->pts = frame->pts; 
 
-			memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
+				memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
 
-			pluginHandler->Signal(PluginHandler::SignalNewFrame);
+				pluginHandler->Signal(PluginHandler::SignalNewFrame);
 
-			nFrames++;
+				nFrames++;
+			}
+		}
+
+		catch(VideoEx ex)
+		{
+			FlogW(ex.GetMsg());
 		}
 
 		if(nFrames == 0)
