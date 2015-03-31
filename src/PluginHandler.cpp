@@ -121,8 +121,13 @@ class CPluginHandler : public PluginHandler
 				
 			if(!plugin.process->IsRunning()){
 				// process exited
-				hostQueue->WriteMessage(Str("error 0 " << plugin.name), "process exited");
-				FlogW("process exited, plugin: " << plugin.executable << " " << plugin.name);
+				int exitCode = plugin.process->GetExitCode();
+
+				std::string msg = Str("process exited unexpectedly, plugin: " 
+					<< plugin.executable << " " << plugin.name << ", exit code: " << exitCode);
+
+				hostQueue->WriteMessage(Str("error 0 " << plugin.name), msg);
+				FlogW(msg);
 
 				plugin.started = false;
 				break;
