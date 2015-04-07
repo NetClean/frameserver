@@ -57,6 +57,16 @@ class Win32Process : public Process {
 	{
 		ResumeThread(proc.hThread);
 	}
+	
+	int GetExitCode()
+	{
+		DWORD ret;
+
+		if(!GetExitCodeProcess(proc.hProcess, &ret))
+			throw PlatformEx(Str("failed to get process exit code"));
+
+		return ret;
+	}
 };
 
 class Win32Platform : public Platform {
@@ -119,7 +129,8 @@ class Win32Platform : public Platform {
 		return CombinePath({drive, dir});
 	}
 
-	ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory, bool startPaused, bool showWindow)
+	ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory, 
+		bool startPaused, bool showWindow, int msTimeout)
 	{
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
@@ -134,16 +145,37 @@ class Win32Platform : public Platform {
 
 		FlogD("starting process: " << executable);
 
+		std::string env = Str("PATH=" << directory << "\0");
+
 		char* cmdLine = strdup(Tools::Join({Str('"' << executable << '"'), Tools::Join(args)}).c_str());
+
 		FlogExpD(cmdLine);
 		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE,
 			(showWindow ? 0 : CREATE_NO_WINDOW) | (startPaused ? CREATE_SUSPENDED : 0),
-			NULL, directory.c_str(), &si, &pi);
+			(LPVOID)env.c_str(), directory.c_str(), &si, &pi);
 
 		free(cmdLine);
 
 		AssertEx(err != 0, PlatformEx, "(CreateProcess) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");
-		
+
+		// wait for process to start before returning
+		bool processStarted = false;
+
+		for(int i = 0; i < msTimeout; i++){
+			if(WaitForSingleObject(pi.hProcess, 0) == WAIT_TIMEOUT){
+				processStarted = true;
+				break;
+			}
+
+			Sleep(1);
+		}
+
+		if(!processStarted)
+			throw PlatformEx(Str("failed to start process: " << executable));
+				
+		if(!AssignProcessToJobObject(jobHandle, pi.hProcess))
+			throw PlatformEx(Str("failed to assign process to job: " << executable));
+			
 		return ProcessPtr(new Win32Process(pi));
 	}
 
