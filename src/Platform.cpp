@@ -71,26 +71,9 @@ class Win32Process : public Process {
 
 class Win32Platform : public Platform {
 	public:
-	HANDLE jobHandle;
-
 	Win32Platform(){
 		// SetErrorMode to never displaying any popup windows. Should propagate to child processes.
 		SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
-
-		// Create a job object with limits that kill the subprocesses on exit
-		jobHandle = CreateJobObject(NULL, NULL);
-		AssertEx(jobHandle != 0, PlatformEx, "(CreateJobObject) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");
-			
-		JOBOBJECT_EXTENDED_LIMIT_INFORMATION eInfo;
-		memset(&eInfo, 0, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
-		eInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-
-		int err = SetInformationJobObject(jobHandle, JobObjectExtendedLimitInformation, &eInfo, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
-		AssertEx(err != 0, PlatformEx, "(SetInformationJobObject) win32 error: " << GetErrorStr(GetLastError()) << " (" << GetLastError() << ")");
-	}
-
-	~Win32Platform(){
-		CloseHandle(jobHandle);
 	}
 
 	std::string GetErrorStr(DWORD nErrorCode)
@@ -103,7 +86,7 @@ class Win32Platform : public Platform {
 
 		if (nChar > 0){
 			ret.assign(msg);
-			free(msg);
+			LocalFree(msg);
 		}
 
 		return ret;
@@ -145,7 +128,9 @@ class Win32Platform : public Platform {
 
 		FlogD("starting process: " << executable);
 
-		std::string env = Str("PATH=" << directory << "\0");
+		std::string env = Str("PATH=" << directory);
+		env.push_back(0);
+		FlogExpD(directory);
 
 		char* cmdLine = strdup(Tools::Join({Str('"' << executable << '"'), Tools::Join(args)}).c_str());
 
@@ -173,9 +158,6 @@ class Win32Platform : public Platform {
 		if(!processStarted)
 			throw PlatformEx(Str("failed to start process: " << executable));
 				
-		if(!AssignProcessToJobObject(jobHandle, pi.hProcess))
-			throw PlatformEx(Str("failed to assign process to job: " << executable));
-			
 		return ProcessPtr(new Win32Process(pi));
 	}
 
