@@ -1,6 +1,7 @@
 #include "PluginHandler.h"
 
 #include <vector>
+#include <map>
 
 #include "IpcMessageQueue.h"
 #include "UuidGenerator.h"
@@ -15,9 +16,13 @@ struct Plugin
 	std::vector<std::tuple<std::string, std::string>> args;
 	IpcMessageQueuePtr messageQueue;
 	ProcessPtr process;
-	bool started;
-	bool finished;
-	bool debug;
+	std::string debugger;
+	std::string debuggerArgs;
+	bool started = false;
+	bool finished = false;
+	bool debug = false;
+	bool startSuspended = false;
+	bool showWindow = false;
 };
 
 class CPluginHandler : public PluginHandler 
@@ -53,18 +58,42 @@ class CPluginHandler : public PluginHandler
 				FlogExpD(messageQueueName);
 				plugin.messageQueue = IpcMessageQueue::Create(messageQueueName, 2, 1024 * 1024 * 32, 4, 1024 * 16);
 
-				if(plugin.debug){
-					std::string gdb = "gdb.exe";
-					plugin.process = platform->StartProcess(gdb, {"--args", plugin.executable, messageQueueName, shmName}, plugin.directory, false, true);
+				// start with a debugger
+				if(plugin.debug && plugin.debugger != ""){
+					FlogD("debugging enabled for: " << plugin.executable);
+
+					std::vector<std::string> args;
+
+					std::map<std::string, std::string> vars = {
+						{"$plugin", plugin.executable},
+						{"\"$plugin\"", Str("\"" << plugin.executable << "\"")},
+						{"$frame_name", shmName},
+						{"$cmd_queue_name", messageQueueName},
+					};
+
+					for(auto arg : Tools::Split(plugin.debuggerArgs)){
+						auto var = vars.find(arg);
+
+						if(var != vars.end())
+							args.push_back(var->second);
+						else 
+							args.push_back(arg);
+					}
+
+					plugin.process = platform->StartProcess(plugin.debugger, args, plugin.directory, plugin.startSuspended, plugin.showWindow);
 				}
 
+				// start without a debugger
 				else {
-					plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, false, false);
+					plugin.process = platform->StartProcess(plugin.executable, 
+						{messageQueueName, shmName}, plugin.directory, plugin.startSuspended, plugin.showWindow);
 				}
 
-				//plugin.process = platform->StartProcess(plugin.executable, {messageQueueName, shmName}, plugin.directory, true);
-				//plugin.process->InjectDll(platform->CombinePath({platform->GetWorkingDirectory(), "plugins", "videosdk.dll"}));
-				//plugin.process->Resume();
+				if(plugin.startSuspended)
+				{
+					platform->WaitMessageBox("Debug", "Plugin suspended. Attach debugger and press OK to resume plugin.");
+					plugin.process->Resume();
+				}
 
 				plugin.started = true;
 				plugin.finished = false;
@@ -78,16 +107,56 @@ class CPluginHandler : public PluginHandler
 		}
 	}
 
-	void SetArgument(const std::string& pluginName, const std::string& key, const std::string& value){
-		bool found = false;
-		for(auto& plugin : plugins){
-			if(plugin.name == pluginName){
-				plugin.args.push_back(std::tuple<std::string, std::string>{key, value});
-				found = true;
+	std::vector<Plugin>::iterator FindPlugin(const std::string& name)
+	{
+		for(auto plugin = plugins.begin(); plugin != plugins.end(); plugin++){
+			if(plugin->name == name){
+				return plugin;
 			}
 		}
-		if(!found)
-			FlogE("no such plugin enabled: " << pluginName);
+		
+		FlogE("no plugin with name: " << name << " is enabled");
+
+		return plugins.end();
+	}
+
+	void SetArgument(const std::string& pluginName, const std::string& key, const std::string& value){
+		auto plugin = FindPlugin(pluginName);
+		if(plugin != plugins.end()){
+			plugin->args.push_back(std::tuple<std::string, std::string>{key, value});
+		}
+	}
+	
+	void SetDebugger(const std::string& pluginName, const std::string& debugger)
+	{
+		auto plugin = FindPlugin(pluginName);
+		if(plugin != plugins.end()){
+			plugin->debugger = debugger;
+		}
+	}
+
+	void SetDebuggerArgs(const std::string& pluginName, const std::string& debuggerArgs)
+	{
+		auto plugin = FindPlugin(pluginName);
+		if(plugin != plugins.end()){
+			plugin->debuggerArgs = debuggerArgs;
+		}
+	}
+	
+	void SetStartSuspended(const std::string& pluginName, bool value)
+	{
+		auto plugin = FindPlugin(pluginName);
+		if(plugin != plugins.end()){
+			plugin->startSuspended = value;
+		}
+	}
+	
+	void SetShowWindow(const std::string& pluginName, bool value)
+	{
+		auto plugin = FindPlugin(pluginName);
+		if(plugin != plugins.end()){
+			plugin->showWindow = value;
+		}
 	}
 
 	void EndSession(int timeout){

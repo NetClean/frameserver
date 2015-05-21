@@ -139,7 +139,51 @@ class CProgram : public Program {
 						bool debug = vec.size() == 3 && vec[2] == "debug";
 						pluginHandler->AddPlugin(vec[0], platform->CombinePath({dir, vec[1], Str(vec[1] << ".exe")}), dir, debug);
 					}else{
-						FlogE("enable expects 2 or 3 arguments (handle and plugin name (debug))");
+						FlogE("enable expects: enable [name] [executable] (\"debug\")");
+					}
+				}
+				
+				else if(Tools::StartsWith(type, "debugger_args")){
+					auto vec = Tools::Split(type, '/');
+					if(vec.size() == 2){
+						FlogExpD(vec[0]);
+						FlogExpD(vec[1]);
+						pluginHandler->SetDebuggerArgs(vec[1], message);
+					}else{
+						FlogE("debugger_args expects: debugger_args/[plugin name] [args] (literally slashes)");
+					}
+				}
+			
+				else if(Tools::StartsWith(type, "debugger")){
+					auto vec = Tools::Split(type, '/');
+					if(vec.size() == 2){
+						FlogExpD(vec[0]);
+						FlogExpD(vec[1]);
+						pluginHandler->SetDebugger(vec[1], message);
+					}else{
+						FlogE("debugger expects: debugger/[plugin name] [debugger] (literally slashes)");
+					}
+				}
+				
+				else if(Tools::StartsWith(type, "start_suspended")){
+					auto vec = Tools::Split(type, '/');
+					if(vec.size() == 2){
+						FlogExpD(vec[0]);
+						FlogExpD(vec[1]);
+						pluginHandler->SetStartSuspended(vec[1], message == "true");
+					}else{
+						FlogE("start_suspended expects: start_suspended/[plugin name] [true/false] (literally slashes)");
+					}
+				}
+				
+				else if(Tools::StartsWith(type, "show_window")){
+					auto vec = Tools::Split(type, '/');
+					if(vec.size() == 2){
+						FlogExpD(vec[0]);
+						FlogExpD(vec[1]);
+						pluginHandler->SetShowWindow(vec[1], message == "true");
+					}else{
+						FlogE("show_window expects: show_window/[plugin name] [true/false] (literally slashes)");
 					}
 				}
 
@@ -151,7 +195,7 @@ class CProgram : public Program {
 						FlogExpD(vec[2]);
 						pluginHandler->SetArgument(vec[1], vec[2], message);
 					}else{
-						FlogE("argument expects argument/[plugin name]/[key] (literally slashes)");
+						FlogE("argument expects: argument/[plugin name]/[key] [argument] (literally slashes)");
 					}
 				}
 

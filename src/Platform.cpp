@@ -160,9 +160,13 @@ class Win32Platform : public Platform {
 				
 		return ProcessPtr(new Win32Process(pi));
 	}
-
 	
-	virtual void GetRandChars(char* buffer, int len)
+	void WaitMessageBox(const std::string& caption, const std::string& message)
+	{
+		MessageBox(NULL, message.c_str(), caption.c_str(), MB_OK);
+	}
+	
+	void GetRandChars(char* buffer, int len)
 	{
 		HCRYPTPROV hProvider = 0;
 
