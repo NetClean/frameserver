@@ -27,6 +27,10 @@ class PluginHandler
 	virtual void Signal(SignalType signal) = 0;
 	virtual void ProcessMessages(PlatformPtr platform, IpcMessageQueuePtr hostQueue, bool expectFinished, int timeout = 10000) = 0;
 	virtual void SetArgument(const std::string& pluginName, const std::string& key, const std::string& value) = 0;
+	virtual void SetDebugger(const std::string& pluginName, const std::string& debugger) = 0;
+	virtual void SetDebuggerArgs(const std::string& pluginName, const std::string& debuggerArgs) = 0;
+	virtual void SetStartSuspended(const std::string& pluginName, bool value) = 0;
+	virtual void SetShowWindow(const std::string& pluginName, bool value) = 0;
 
 	static PluginHandlerPtr Create();
 };

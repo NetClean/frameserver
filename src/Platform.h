@@ -30,6 +30,7 @@ class Platform {
 	virtual std::string GetWorkingDirectory() = 0;
 	virtual std::string CombinePath(const StrVec& paths) = 0;
 	virtual void GetRandChars(char* buffer, int len) = 0;
+	virtual void WaitMessageBox(const std::string& caption, const std::string& message) = 0;
 
 	static PlatformPtr Create();
 };
