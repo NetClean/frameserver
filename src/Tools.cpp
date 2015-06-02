@@ -35,34 +35,23 @@ bool Tools::StartsWith(const std::string& haystack, const std::string& needle)
 	return haystack.substr(0, needle.size()) == needle;
 }
 
-int Tools::ParseCookies(const std::string& str, StrStrMap& map)
-{
-	StrVec v = Split(str, ';');
-	int ret = 0;
-	for(auto& s : v){
-		size_t pos = s.find('=');
-
-		if(pos == std::string::npos)
-			throw ParseCookieEx(Str("no = found in: '" << s << "'"));
-		
-		if(pos == 0)
-			throw ParseCookieEx("no key (= is first character)");
-
-		map[Trim(s.substr(0, pos))] = pos < s.size() - 1 ? Trim(RTrim(s.substr(pos + 1))) : ""; 
-		ret++;
-	}
-	return ret;
-}
-
-StrVec Tools::Split(const std::string& s, char delim)
+StrVec Tools::Split(const std::string& s, char delim, int count)
 {
 	std::vector<std::string> ret;
 
 	std::stringstream ss(s);
 	std::string item;
+	size_t at = 0;
 
 	while (std::getline(ss, item, delim)) {
 		ret.push_back(item);
+		at += item.size() + 1;
+
+		if(count != -1 && count == (int)ret.size()){
+			if(at < ss.str().size())
+				ret.push_back(ss.str().substr(at));
+			break;
+		}
 	}
 
 	return ret;
