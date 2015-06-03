@@ -1,8 +1,11 @@
 #include "Platform.h"
 
 #include <cstdlib>
+#include <map>
+#include <algorithm>
 
 #include "flog.h"
+#include "Tools.h"
 
 //#define WIN32_LEAN_AND_MEAN
 //#define WIN32_EXTRA_LEAN
@@ -112,6 +115,44 @@ class Win32Platform : public Platform {
 		return CombinePath({drive, dir});
 	}
 
+	std::map<std::string, std::string> GetEnvironment()
+	{
+		char* env = GetEnvironmentStrings();
+		std::map<std::string, std::string> ret;
+
+		while(*env != 0){
+			std::string line = std::string(env);
+
+			env += line.size() + 1;
+			StrVec s = Tools::Split(line, '=', 1);
+
+			// Make all vars uppercase to make sure there are no ambiguous vars,
+			// like "Path" and "PATH".
+
+			std::transform(s[0].begin(), s[0].end(), s[0].begin(), ::toupper);
+
+			ret[s[0]] = s[1];
+		}
+
+		return ret;
+	}
+
+	std::string MapToEnv(const std::map<std::string, std::string>& env)
+	{
+		std::string ret;
+
+		for(auto e : env)
+		{
+			std::string line = Str(e.first << "=" << e.second);
+			ret.append(line);
+			ret.push_back(0);
+		}
+
+		ret.push_back(0);
+
+		return ret;
+	}
+
 	ProcessPtr StartProcess(const std::string& executable, const StrVec& args, const std::string& directory, 
 		bool startPaused, bool showWindow, int msTimeout)
 	{
@@ -128,16 +169,22 @@ class Win32Platform : public Platform {
 
 		FlogD("starting process: " << executable);
 
-		std::string env = Str("PATH=" << directory);
-		env.push_back(0);
-		FlogExpD(directory);
+		std::map<std::string, std::string> env = GetEnvironment();
+
+		if(env.find("PATH") != env.end()){
+			env["PATH"] = Str(env["PATH"] << ";" << directory);
+		}else{
+			env["PATH"] = directory;
+		}
+
+		std::string envStr = MapToEnv(env);
 
 		char* cmdLine = strdup(Tools::Join({Str('"' << executable << '"'), Tools::Join(args)}).c_str());
 
 		FlogExpD(cmdLine);
 		int err = CreateProcess(executable.c_str(), cmdLine, NULL, NULL, FALSE,
 			(showWindow ? 0 : CREATE_NO_WINDOW) | (startPaused ? CREATE_SUSPENDED : 0),
-			(LPVOID)env.c_str(), directory.c_str(), &si, &pi);
+			(LPVOID)envStr.c_str(), directory.c_str(), &si, &pi);
 
 		free(cmdLine);
 
