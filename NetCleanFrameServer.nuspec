@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>NetCleanFrameServer</id>
-    <version>1.0.2.2</version>
+    <version>1.0.2.3</version>
     <authors>Fredrik Hultin</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>NetClean FrameServer</description>
@@ -10,7 +10,8 @@
   <files>
 		<file src="dummy.txt" target="lib" /> <!-- required for nuget to do anything -->
     <file src="NetCleanFrameServer.exe" target="CopyToOutput/always/frameserver" />
+    <file src="NetCleanFrameServer.exe.debug" target="CopyToOutput/always/frameserver" />
     <file src="plugins/test/*.*" target="CopyToOutput/always/frameserver/plugins/test" />
-		<file src="frameserver_sdk/videosdk.dll" target="CopyToOutput/always/frameserver/plugins" /> <!-- required for nuget to do anything -->
+		<file src="frameserver_sdk/videosdk.dll" target="CopyToOutput/always/frameserver/plugins" />
   </files>
 </package>
