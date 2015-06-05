@@ -12,6 +12,8 @@ ldflags             Wl,-Bstatic
 target_platform     mingw32
 lib-static          libvx libshmipc
 
+oncleanscript       "rm -f $(target).debug"
+
 [*debug: common]
 cflags              g DDEBUG
 ldflags             mconsole
@@ -19,5 +21,10 @@ postbuildscript     "echo built DEBUG version"
 
 [release: common]
 ldflags             mwindows
-postbuildscript     "$(host_dash)strip $(target)"
+
+postbuildscript     "$(host_dash)objcopy --only-keep-debug $(target) $(target).debug"
+postbuildscript     "$(host_dash)strip -g $(target)"
+postbuildscript     "$(host_dash)objcopy --add-gnu-debuglink=$(target).debug $(target)"
+postbuildscript     "chmod -x $(target).debug"
+
 postbuildscript     "echo built RELEASE version"
