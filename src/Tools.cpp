@@ -54,6 +54,9 @@ StrVec Tools::Split(const std::string& s, char delim, int count)
 		}
 	}
 
+	if(s.size() > 0 && (count == -1 || ret.size() < (unsigned)(count + 1)) && s[s.size() - 1] == delim)
+		ret.push_back("");
+
 	return ret;
 }
 

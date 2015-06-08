@@ -23,6 +23,7 @@ postbuildscript     "echo built DEBUG version"
 ldflags             mwindows
 
 postbuildscript     "$(host_dash)objcopy --only-keep-debug $(target) $(target).debug"
+#postbuildscript     "cp $(target) $(target).orig"
 postbuildscript     "$(host_dash)strip -g $(target)"
 postbuildscript     "$(host_dash)objcopy --add-gnu-debuglink=$(target).debug $(target)"
 postbuildscript     "chmod -x $(target).debug"

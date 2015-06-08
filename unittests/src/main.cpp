@@ -9,6 +9,8 @@ int main(int argc, char** argv)
 
 	tests.push_back(new Test_IpcMessageQueue_SendRecvMessage());
 	tests.push_back(new Test_SharedMem_ReadWrite());
+	tests.push_back(new Test_Tools_Split());
+	tests.push_back(new Test_Tools_SplitLimit());
 
 	int ret = 0;
 	for(auto test : tests){

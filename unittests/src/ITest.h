@@ -24,7 +24,6 @@ class ITest {
 };
 
 #define TEST_EX(_msg) \
-	FlogE("test failed because: " << _msg); \
 	throw TestFailedEx(GetSection(), GetSubsection(), Str(_msg));
 
 #define TEST_ASSERT(_v, _msg) \
