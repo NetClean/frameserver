@@ -1,3 +1,4 @@
 [submodule "frameserver_sdk"]
 	path = frameserver_sdk
 	url = https://github.com/NetClean/frameserver_sdk.git
+	pushurl = git@github.com:NetClean/frameserver_sdk.git
