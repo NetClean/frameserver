@@ -4,8 +4,8 @@
 DEF_TEST(IpcMessageQueue, SendRecvMessage)
 {
 	try {
-		IpcMessageQueuePtr host = IpcMessageQueue::Create("test");
-		IpcMessageQueuePtr client = IpcMessageQueue::Open("test");
+		IpcMessageQueuePtr host = IpcMessageQueue::Create("utest");
+		IpcMessageQueuePtr client = IpcMessageQueue::Open("utest");
 
 		bool ret = host->WriteMessage("test", "hello");
 		TEST_ASSERT(ret, "unexpected timeout when writing message");

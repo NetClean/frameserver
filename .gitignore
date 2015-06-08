@@ -8,3 +8,8 @@
 *.desc72
 *.data
 clips
+clips2
+testclips
+*.prd
+*.tga
+*.debug

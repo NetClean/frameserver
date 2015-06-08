@@ -54,7 +54,7 @@ class CIpcMessageQueue : public IpcMessageQueue {
 	bool WriteMessage(std::string type, std::string message, int timeout) {
 		AssertEx(type.length() < SHMIPC_MESSAGE_TYPE_LENGTH, IpcEx, "type too long (" << type.length() << " / " << SHMIPC_MESSAGE_TYPE_LENGTH << ")"); 
 		auto err = shmipc_send_message(writeQueue, type.c_str(), message.c_str(), message.length(), timeout);
-		AssertEx(err == SHMIPC_ERR_SUCCESS || err == SHMIPC_ERR_TIMEOUT, IpcEx, "failed to send message");
+		AssertEx(err == SHMIPC_ERR_SUCCESS || err == SHMIPC_ERR_TIMEOUT, IpcEx, "failed to send message (" << err << ")");
 		return (err == SHMIPC_ERR_SUCCESS);
 	}
 
@@ -104,7 +104,6 @@ class CIpcMessageQueue : public IpcMessageQueue {
 	}
 
 	~CIpcMessageQueue(){
-		FlogD("destroying queue");
 		shmipc_destroy(&writeQueue);
 		shmipc_destroy(&readQueue);
 	}

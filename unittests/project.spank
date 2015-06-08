@@ -4,6 +4,7 @@ cflags           ggdb std=c++0x Wall
 sourcedir        ../src src
 exclude          ../src/main.cpp
 cflags           I../src
-lib              libvx libshmipc
+lib-static       libvx libshmipc
 target_platform  mingw32
-ldflags          static-libgcc static-libstdc++ Wl,--enable-auto-image-base Wl,--add-stdcall-alias Wl,--enable-auto-import Wl,-Bstatic
+#ldflags          static-libgcc static-libstdc++ Wl,--enable-auto-image-base Wl,--add-stdcall-alias Wl,--enable-auto-import Wl,-Bstatic
+ldflags          static static-libgcc static-libstdc++ Wl,-Bstatic
