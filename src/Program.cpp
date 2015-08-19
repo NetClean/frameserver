@@ -69,8 +69,17 @@ class CProgram : public Program {
 
 		try {
 			while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
+				
+				// report progress to host
+				int32_t* progress = (int32_t*)hostQueue->GetWriteBuffer();
+				progress[0] = nFrames;
+				progress[1] = totFrames;
+				hostQueue->ReturnWriteBuffer("progress", (char**)&progress, sizeof(int32_t) * 2);
+
+				// process plugin messages
 				pluginHandler->ProcessMessages(platform, hostQueue, false);
 
+				// prepare frame and signal plugins
 				info->width = frame->width;
 				info->height = frame->height;
 				info->flags = frame->flags;

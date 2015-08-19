@@ -57,6 +57,10 @@ int main(int argc, char** argv)
 				if(sType.size() == 3 && sType[0] == "error"){
 					FlogI("error from: " << sType[2] << ", code: " << sType[1] << ", message: " << std::string(buffer, size));
 				}
+
+				if(type == "progress"){
+					FlogI("progress: " << ((int32_t*)buffer)[0] << " " << ((int32_t*)buffer)[1]);
+				}
 			}, 1);
 		}
 	}
