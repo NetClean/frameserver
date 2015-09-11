@@ -90,8 +90,6 @@ class CProgram : public Program {
 		int audioBufferAt = 0;
 		int numSamples = 0;
 
-		FILE* af = fopen("audio.raw", "w");
-
 		// audio callback lambda, may be called any number of times during video::GetFrame()
 		OnAudioFn audioFn = [&](const void* samples, int nSamples, double ts)
 		{
@@ -102,13 +100,6 @@ class CProgram : public Program {
 				return;
 			}
 			
-			FlogExpD(audioBufferAt);
-			FlogExpD(nSamples);
-			FlogExpD(sampleSize);
-			FlogExpD(size);
-
-			fwrite(samples, nSamples, sampleSize, af);
-
 			memcpy((void*)&audioBuffer[audioBufferAt], samples, size);
 			audioBufferAt += size;
 			numSamples += nSamples;
@@ -160,33 +151,6 @@ class CProgram : public Program {
 				audioBufferAt = 0;
 				numSamples = 0;
 
-				static bool w = false;
-
-				if(!w){
-					printf("[d] reserved:          %d\n", info->reserved);
-					printf("[d] width:             %d\n", info->width);
-					printf("[d] height:            %d\n", info->height);
-					printf("[d] flags              %08x\n", info->flags);
-					printf("[d] byte_pos           %lld\n", info->byte_pos);
-					printf("[d] dts                %lld\n", info->dts);
-					printf("[d] pts                %lld\n", info->pts);
-					printf("[d] tot_frames:        %d\n", info->tot_frames);
-					printf("[d] fps:               %f\n", info->fps);
-					printf("[d] fps_guessed:       %d\n", (int)info->fps_guessed);
-					printf("[d] pts_seconds:       %f\n", info->pts_seconds);
-					printf("[d] dts_seconds:       %f\n", info->dts_seconds);
-					printf("[d] has_audio:         %d\n", (int)info->has_audio);
-					printf("[d] orig_sample_rate:  %d\n", info->orig_sample_rate);
-					printf("[d] channels:          %d\n", info->channels);
-					printf("[d] num_samples:       %d\n", info->num_samples);
-					printf("[d] smaple_format_str: %s\n", info->sample_format_str);
-		
-					w = true;
-					FILE* f = fopen("dunp", "w");
-					fwrite((void*)info, sizeof(ShmVidInfo), 1, f);
-					fclose(f);
-				}
-
 				pluginHandler->Signal(PluginHandler::SignalNewFrame);
 
 				nFrames++;
@@ -198,8 +162,6 @@ class CProgram : public Program {
 			FlogW(ex.GetMsg());
 		}
 		
-		fclose(af);
-
 		if(nFrames == 0)
 			throw VideoEx("no frames in video");
 		
