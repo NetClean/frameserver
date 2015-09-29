@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <functional>
 
 #include "Macros.h"
 #include "Frame.h"
@@ -11,6 +12,7 @@ class Video;
 
 typedef std::shared_ptr<Video> VideoPtr;
 typedef std::shared_ptr<void> BufferPtr;
+typedef std::function<void(const void* samples, int num_samples, double ts)> OnAudioFn;
 
 DefEx(VideoEx);
 
@@ -21,6 +23,11 @@ class Video {
 		PixelFormatGray
 	};
 
+	enum SampleFormat {
+		SampleFormatS16 = 0,
+		SampleFormatFlt = 1
+	};
+
 	virtual int GetWidth() = 0;
 	virtual int GetHeight() = 0;
 	virtual float GetPixelAspectRatio() = 0;
@@ -29,8 +36,17 @@ class Video {
 	virtual long long GetFilePosition() = 0;
 	virtual long long GetFileSize() = 0;
 
-	virtual bool GetFrame(int width, int height, PixelFormat fmt, FramePtr frame) = 0;
+	virtual bool AudioPresent() = 0;
+	virtual int GetSampleRate() = 0;
+	virtual int GetChannels() = 0;
+	virtual std::string GetSampleFormatStr() = 0;
 	
+	virtual double TimeStampToSeconds(long long ts) = 0;
+
+	virtual bool GetFrame(int width, int height, PixelFormat fmt, FramePtr frame) = 0;
+
+	virtual void SetAudioParameters(int sampleRate, int channels, SampleFormat format, OnAudioFn fn) = 0;
+
 	static int CountFramesInFile(const std::string& filename); 
 	
 	static FramePtr CreateFrame(int width, int height, PixelFormat fmt);

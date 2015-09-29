@@ -13,6 +13,7 @@ struct Frame {
 	int64_t bytePos, dts, pts;
 	int width, height, bytesPerPixel;
 	uint8_t* buffer;
+	double dtsSeconds, ptsSeconds;
 };
 
 typedef std::shared_ptr<Frame> FramePtr;

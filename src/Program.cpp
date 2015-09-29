@@ -1,6 +1,9 @@
 #include "Program.h"
 #include <vector>
 #include <cstdlib>
+#include <cstring>
+#include <cstdio>
+#include <cinttypes>
 
 #include "flog.h"
 
@@ -12,21 +15,35 @@
 #include "RandChar.h"
 #include "IpcMessageQueue.h"
 
+extern "C" {
 #pragma pack(4)
 struct __attribute__ ((packed)) ShmVidInfo {
 	uint32_t reserved;
 	uint32_t width;
 	uint32_t height;
 	uint32_t flags;
-	int64_t bytePos;
+	int64_t byte_pos;
 	int64_t pts;
 	int64_t dts;
 	
-	uint32_t totFrames;
+	uint32_t tot_frames;
 	float fps;
-	bool fpsGuessed;
+	char fps_guessed;
+
+	double pts_seconds;
+	double dts_seconds;
+
+	char has_audio;
+	int orig_sample_rate;
+	int channels;
+	int num_samples;
+	char sample_format_str[16];
 };
 #pragma pack() // restore packing
+}
+
+#define NCV_HEADER_SIZE 4096
+#define NCV_PADDING_SIZE 4096
 
 class CProgram : public Program {
 	public:
@@ -34,41 +51,79 @@ class CProgram : public Program {
 		VideoPtr video = Video::Create(videoFile);
 		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
 
+		int sampleRate = 44100;
+		int channels = video->GetChannels();
+		int sampleSize = sizeof(float) * channels;
+		int audioBufferSize = sampleSize * sampleRate * 8; // 8 seconds buffer
+
+		int frameBufferSize = frame->width * frame->height * frame->bytesPerPixel;
+		std::vector<char> audioBuffer(audioBufferSize);
+
 		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create(platform));
 
 		// shared memory area layout:
 		//   4096 byte reserved for header
 		//   frame
 		//   4096 padding as a workaround for a bug in swscale (?) where it overreads the buffer
+		//   audio buffer
 
-		SharedMemPtr frameShm = SharedMem::Create(frameShmName, frame->width * frame->height * frame->bytesPerPixel + 4096 + 4096);
+		SharedMemPtr frameShm = SharedMem::Create(frameShmName, NCV_HEADER_SIZE + frameBufferSize + NCV_PADDING_SIZE + audioBufferSize);
 
 		FlogExpD(frameShmName);
 		
 		volatile ShmVidInfo* info = (ShmVidInfo*)frameShm->GetPtrRw();
 
-		info->totFrames = totFrames;
+		info->tot_frames = totFrames;
 
 		try {
 			info->fps = video->GetFrameRate();
-			info->fpsGuessed = false;
+			info->fps_guessed = 0;
 		}
 
 		catch(VideoEx)
 		{
 			info->fps = 29.97;
-			info->fpsGuessed = true;
+			info->fps_guessed = 1;
 		}
+		
+		int nFrames = 0;
+		int audioBufferAt = 0;
+		int numSamples = 0;
 
-		FlogExpD(info->fps);
+		// audio callback lambda, may be called any number of times during video::GetFrame()
+		OnAudioFn audioFn = [&](const void* samples, int nSamples, double ts)
+		{
+			int size = sampleSize * nSamples;
+
+			if(audioBufferAt + size >= audioBufferSize){
+				FlogW("audio buffer overrun");
+				return;
+			}
+			
+			memcpy((void*)&audioBuffer[audioBufferAt], samples, size);
+			audioBufferAt += size;
+			numSamples += nSamples;
+		};
+
+		info->has_audio = video->AudioPresent() ? 1 : 0;
+		if(info->has_audio){
+			info->orig_sample_rate = video->GetSampleRate();
+			info->channels = video->GetChannels();
+			info->num_samples = 0;
+
+			std::string fmt = video->GetSampleFormatStr();
+			strncpy((char*)info->sample_format_str, fmt.c_str(), 16);
+		
+			video->SetAudioParameters(sampleRate, channels, Video::SampleFormatFlt, audioFn);
+		}
 
 		FlogD("Starting session...");
 		pluginHandler->StartSession(frameShmName, platform, hostQueue);
 
-		int nFrames = 0;
-
 		try {
-			while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame)){
+			while(true){
+				if(!video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame))
+					break;
 				
 				// report progress to host
 				int32_t* progress = (int32_t*)hostQueue->GetWriteBuffer();
@@ -83,11 +138,18 @@ class CProgram : public Program {
 				info->width = frame->width;
 				info->height = frame->height;
 				info->flags = frame->flags;
-				info->bytePos = frame->bytePos;
+				info->byte_pos = frame->bytePos;
 				info->dts = frame->dts;
 				info->pts = frame->pts; 
+				info->dts_seconds = video->TimeStampToSeconds(frame->dts);
+				info->pts_seconds = video->TimeStampToSeconds(frame->pts);
+				info->num_samples = numSamples;
 
-				memcpy((void*)((char*)frameShm->GetPtrRw() + 4096), frame->buffer, frame->width * frame->height * frame->bytesPerPixel);
+				memcpy((void*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE), frame->buffer, frameBufferSize);
+				memcpy((void*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE + frameBufferSize + NCV_PADDING_SIZE), (void*)&audioBuffer[0], audioBufferAt);
+				
+				audioBufferAt = 0;
+				numSamples = 0;
 
 				pluginHandler->Signal(PluginHandler::SignalNewFrame);
 
@@ -99,7 +161,7 @@ class CProgram : public Program {
 		{
 			FlogW(ex.GetMsg());
 		}
-
+		
 		if(nFrames == 0)
 			throw VideoEx("no frames in video");
 		
