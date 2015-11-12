@@ -85,7 +85,7 @@ class CProgram : public Program {
 			info->fps = 29.97;
 			info->fps_guessed = 1;
 		}
-		
+
 		int nFrames = 0;
 		int audioBufferAt = 0;
 		int numSamples = 0;
@@ -120,6 +120,10 @@ class CProgram : public Program {
 		FlogD("Starting session...");
 		pluginHandler->StartSession(frameShmName, platform, hostQueue);
 
+		double reportPts = .0;
+		double lastPts = .0;
+		double fps = info->fps;
+
 		try {
 			while(true){
 				if(!video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame))
@@ -133,7 +137,29 @@ class CProgram : public Program {
 
 				// process plugin messages
 				pluginHandler->ProcessMessages(platform, hostQueue, false);
+				
+				// calculate pts
+				double pts = video->TimeStampToSeconds(frame->pts);
 
+				if(nFrames == 0){
+					// first frame, make sure it will get a reported pts of 0
+					lastPts = pts;
+				}
+
+				double delta = pts - lastPts;
+
+				if(delta < .0 || delta > 2.0)
+				{
+					// if the next timestamp is backwards in time or there's a too 
+					// large gap between the next timestamp and this, just increase reported
+					// pts with frame rate
+					FlogW("pts delta too large or negative, adjusting from: " << delta << " to: " << 1.0 / fps);
+					delta = 1.0 / fps;
+				}
+
+				reportPts += delta;
+				lastPts = pts;
+				
 				// prepare frame and signal plugins
 				info->width = frame->width;
 				info->height = frame->height;
@@ -142,7 +168,7 @@ class CProgram : public Program {
 				info->dts = frame->dts;
 				info->pts = frame->pts; 
 				info->dts_seconds = video->TimeStampToSeconds(frame->dts);
-				info->pts_seconds = video->TimeStampToSeconds(frame->pts);
+				info->pts_seconds = reportPts;
 				info->num_samples = numSamples;
 
 				memcpy((void*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE), frame->buffer, frameBufferSize);
