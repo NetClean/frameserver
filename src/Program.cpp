@@ -49,7 +49,7 @@ class CProgram : public Program {
 	public:
 	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue, PluginHandlerPtr pluginHandler, PlatformPtr platform, int totFrames){
 		VideoPtr video = Video::Create(videoFile);
-		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb);
+		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb32);
 
 		int sampleRate = 44100;
 		int channels = video->GetChannels();
@@ -126,7 +126,7 @@ class CProgram : public Program {
 
 		try {
 			while(true){
-				if(!video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb, frame))
+				if(!video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb32, frame))
 					break;
 				
 				// report progress to host

@@ -19,8 +19,9 @@ DefEx(VideoEx);
 class Video {
 	public:
 	enum PixelFormat {
-		PixelFormatRgb,
-		PixelFormatGray
+		PixelFormatRgb24,
+		PixelFormatGray,
+		PixelFormatRgb32
 	};
 
 	enum SampleFormat {
