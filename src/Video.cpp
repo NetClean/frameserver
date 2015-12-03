@@ -11,9 +11,11 @@ class VideoFrame : public Frame
 		frame = vx_frame_create(width, height, (vx_pix_fmt)fmt);
 		AssertEx(frame, VideoEx, "could not allocate memory for vx_frame_info object");
 
+		int bpp[] = {3, 1, 4};
+
 		this->width = width;
 		this->height = height;
-		this->bytesPerPixel = fmt == Video::PixelFormatGray ? 1 : 3;
+		this->bytesPerPixel = bpp[(int)fmt];
 		this->buffer = (uint8_t*)vx_frame_get_buffer(frame);
 	}
 

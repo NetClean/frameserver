@@ -2,12 +2,12 @@
 template            c++11
 name                NetCleanFrameServer
 sourcedir           src
-cflags              std=c++0x Wall static D__MSVCRT_VERSION__=0x1000
+cflags              std=c++0x Wall static #D__MSVCRT_VERSION__=0x1000
 
 ldflags             static static-libgcc static-libstdc++ 
 #ldflags             Wl,--enable-auto-image-base
 #ldflags             Wl,--add-stdcall-alias Wl,--enable-auto-import
-ldflags             Wl,-Bstatic lmsvcr100
+ldflags             Wl,-Bstatic #lmsvcr100
 
 target_platform     mingw32
 lib-static          libvx libshmipc
