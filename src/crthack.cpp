@@ -167,6 +167,12 @@ int instruction_size_x86(unsigned char *func)
 
 
 // Patches a specific function in a DLL to instead jump to a proxy function.
+// It basically serves the same function as patching the IAT, but it also works for
+// other dlls where the function pointer is loaded at runtime. Not just code in the immediate program. 
+// 
+// (so eg. if a.dll retrieves the address of b.dll!func() and calls it, which in turn is proxied in the 
+// application as proxy_func(), the a.dll call will also be to proxy_func()).
+
 //   func_ptr       function to patch
 //   new_func_ptr   proxy function to rpleace it with
 //   returns        a buffer with an equivalent function of the original
@@ -229,7 +235,8 @@ void* patch_function(void* func_ptr, void* new_func_ptr)
 int WINAPI (*OrigMessageBoxA)(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType);
 int WINAPI ProxyMessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
 {
-	// force show of message box if caption starts with '!'
+	// display the message box if the caption starts with '!',
+	// to allow the program to still use message boxes.
 	if(lpCaption != NULL && lpCaption[0] == '!'){
 		return OrigMessageBoxA(hWnd, lpText, lpCaption + 1, uType);
 	}
