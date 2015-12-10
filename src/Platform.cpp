@@ -210,7 +210,9 @@ class Win32Platform : public Platform {
 	
 	void WaitMessageBox(const std::string& caption, const std::string& message)
 	{
-		MessageBox(NULL, message.c_str(), caption.c_str(), MB_OK);
+		// note, '!' here is an instruction for the MessageBoxA proxy function in crthack.cpp
+		// telling it that this message box should not be suppressed.
+		MessageBox(NULL, message.c_str(), Str("!" << caption).c_str(), MB_OK);
 	}
 	
 	void GetRandChars(char* buffer, int len)
