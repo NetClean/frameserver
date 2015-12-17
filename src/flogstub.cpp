@@ -1,6 +1,7 @@
-#include "flog.h"
 #include <stdarg.h>
 #include <cstdio>
+#include "Macros.h"
+#include "flog.h"
 
 int Flog_SeverityToIndex(Flog_Severity severity)
 {
@@ -20,14 +21,14 @@ const char* Flog_SeverityToString(Flog_Severity severity)
 }
 
 
-#ifdef DEBUG
 static const Flog_Severity logFileSeverity = Flog_SDebug3;
-#else
-static const Flog_Severity logFileSeverity = Flog_SVerbose;
-#endif
 
 void Flog_Log(const char* file, uint32_t lineNumber, Flog_Severity severity, const char* format, ...)
 {
+	// never log anything to file if this isn't a debug build
+	if(!(IS_DEBUG_BUILD))
+		return;
+
 	va_list fmtargs;
 	char buffer[4096];
 
