@@ -166,7 +166,7 @@ class CProgram : public Program {
 				while(!sampleBuffers.empty() && sampleBuffers.top()->pts <= pts){
 					SampleBufferPtr buffer = sampleBuffers.top();
 
-					int nBufferSamples = (int)buffer->samples.size() * channels;
+					int nBufferSamples = (int)buffer->samples.size() / channels;
 
 					if(numSamples + nBufferSamples < maxSamplesPerFrame){
 						std::copy(buffer->samples.begin(), buffer->samples.end(), frameAudioBuffer + numSamples * channels);
