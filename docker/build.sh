@@ -5,6 +5,7 @@ SPANK_REPO=https://github.com/noname22/spank.git
 SPANK=$BUILD_ROOT/spank/spank
 
 ARTIFACTS="NetCleanFrameServer.exe NetCleanFrameServer.exe.debug"
+FRAMESERVERSDK_ARTIFACTS="frameserver_sdk/videosdk.dll"
 
 set -e
 
@@ -49,3 +50,4 @@ $SPANK --jobs 4 rebuild release
 
 # copy back the artifacts to the mounted directory
 cp $ARTIFACTS ../source
+cp $FRAMESERVERSDK_ARTIFACTS ../source/frameserver_sdk
