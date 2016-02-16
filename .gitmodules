@@ -2,3 +2,12 @@
 	path = frameserver_sdk
 	url = https://github.com/NetClean/frameserver_sdk.git
 	pushurl = git@github.com:NetClean/frameserver_sdk.git
+[submodule "deps"]
+	path = deps
+	url = ssh://git@stash.intra.netclean.com:7999/an/videocontrolsubprocessdependencies.git
+[submodule "libvx"]
+	path = libvx
+	url = git@github.com:NetClean/libvx.git
+[submodule "libshmipc"]
+	path = libshmipc
+	url = git@github.com:NetClean/libshmipc.git
