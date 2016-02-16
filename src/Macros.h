@@ -4,6 +4,12 @@
 #include <string>
 #include <sstream>
 
+#ifdef DEBUG
+#define IS_DEBUG_BUILD true
+#else
+#define IS_DEBUG_BUILD false
+#endif
+
 #define DefEx(__name) struct __name : ExBase { __name(std::string msg = "") { this->msg = msg; this->type = #__name; } };
 #define AssertEx(__exp, __ex, __msg) if(!(__exp)){ throw \
 	__ex(Str(__msg << " (" __FILE__":" << __LINE__ << ")")); }

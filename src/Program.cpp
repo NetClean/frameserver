@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cinttypes>
+#include <algorithm>
 
 #include "flog.h"
 
@@ -14,6 +15,8 @@
 #include "UuidGenerator.h"
 #include "RandChar.h"
 #include "IpcMessageQueue.h"
+#include "PriorityQueue.h"
+#include "SampleBuffer.h"
 
 extern "C" {
 #pragma pack(4)
@@ -54,10 +57,12 @@ class CProgram : public Program {
 		int sampleRate = 44100;
 		int channels = video->GetChannels();
 		int sampleSize = sizeof(float) * channels;
-		int audioBufferSize = sampleSize * sampleRate * 8; // 8 seconds buffer
+
+		PriorityQueue<SampleBufferPtr, CompareSampleBuffers> sampleBuffers;
 
 		int frameBufferSize = frame->width * frame->height * frame->bytesPerPixel;
-		std::vector<char> audioBuffer(audioBufferSize);
+		int maxSamplesPerFrame = sampleRate * 8; // 8 seconds
+		int maxAudioBufferSizePerFrame = maxSamplesPerFrame * sampleSize;
 
 		std::string frameShmName = UuidGenerator::Create()->GenerateUuid(RandChar::Create(platform));
 
@@ -67,7 +72,7 @@ class CProgram : public Program {
 		//   4096 padding as a workaround for a bug in swscale (?) where it overreads the buffer
 		//   audio buffer
 
-		SharedMemPtr frameShm = SharedMem::Create(frameShmName, NCV_HEADER_SIZE + frameBufferSize + NCV_PADDING_SIZE + audioBufferSize);
+		SharedMemPtr frameShm = SharedMem::Create(frameShmName, NCV_HEADER_SIZE + frameBufferSize + NCV_PADDING_SIZE + maxAudioBufferSizePerFrame);
 
 		FlogExpD(frameShmName);
 		
@@ -87,25 +92,16 @@ class CProgram : public Program {
 		}
 
 		int nFrames = 0;
-		int audioBufferAt = 0;
-		int numSamples = 0;
 
 		// audio callback lambda, may be called any number of times during video::GetFrame()
 		OnAudioFn audioFn = [&](const void* samples, int nSamples, double ts)
 		{
-			int size = sampleSize * nSamples;
-
-			if(audioBufferAt + size >= audioBufferSize){
-				FlogW("audio buffer overrun");
-				return;
-			}
-			
-			memcpy((void*)&audioBuffer[audioBufferAt], samples, size);
-			audioBufferAt += size;
-			numSamples += nSamples;
+			// create a sample buffer and add it to the - by timestamp sorted - priority queue
+			sampleBuffers.push(SampleBuffer::Create(ts, nSamples, channels, (float*)samples));
 		};
 
 		info->has_audio = video->AudioPresent() ? 1 : 0;
+
 		if(info->has_audio){
 			info->orig_sample_rate = video->GetSampleRate();
 			info->channels = video->GetChannels();
@@ -160,6 +156,33 @@ class CProgram : public Program {
 				reportPts += delta;
 				lastPts = pts;
 				
+				int numSamples = 0;
+				
+				float* frameAudioBuffer = (float*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE + frameBufferSize + NCV_PADDING_SIZE);
+
+				// check the avialble audio buffers and if their timestamp matches the frame
+				// if they do, add them to the frame
+
+				while(!sampleBuffers.empty() && sampleBuffers.top()->pts <= pts){
+					SampleBufferPtr buffer = sampleBuffers.top();
+
+					int nBufferSamples = (int)buffer->samples.size() / channels;
+
+					if(numSamples + nBufferSamples < maxSamplesPerFrame){
+						std::copy(buffer->samples.begin(), buffer->samples.end(), frameAudioBuffer + numSamples * channels);
+						numSamples += nBufferSamples;
+					}
+					else{
+						FlogW("sample buffer overrun");
+					}
+
+					sampleBuffers.pop();
+				}
+
+				info->num_samples = numSamples;
+
+				memcpy((void*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE), frame->buffer, frameBufferSize);
+				
 				// prepare frame and signal plugins
 				info->width = frame->width;
 				info->height = frame->height;
@@ -169,14 +192,7 @@ class CProgram : public Program {
 				info->pts = frame->pts; 
 				info->dts_seconds = video->TimeStampToSeconds(frame->dts);
 				info->pts_seconds = reportPts;
-				info->num_samples = numSamples;
-
-				memcpy((void*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE), frame->buffer, frameBufferSize);
-				memcpy((void*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE + frameBufferSize + NCV_PADDING_SIZE), (void*)&audioBuffer[0], audioBufferAt);
 				
-				audioBufferAt = 0;
-				numSamples = 0;
-
 				pluginHandler->Signal(PluginHandler::SignalNewFrame);
 
 				nFrames++;
