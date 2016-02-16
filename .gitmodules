@@ -7,7 +7,9 @@
 	url = ssh://git@stash.intra.netclean.com:7999/an/videocontrolsubprocessdependencies.git
 [submodule "libvx"]
 	path = libvx
-	url = git@github.com:NetClean/libvx.git
+	url = https://github.com/NetClean/libshmipc.git
+	pushurl = git@github.com:NetClean/libvx.git
 [submodule "libshmipc"]
 	path = libshmipc
-	url = git@github.com:NetClean/libshmipc.git
+	url = https://github.com/NetClean/libshmipc.git
+	pushurl = git@github.com:NetClean/libshmipc.git
