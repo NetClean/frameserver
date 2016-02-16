@@ -39,6 +39,10 @@ cd $BUILD_ROOT/source-copy/libshmipc
 spank build
 spank install
 
+# build frameserver_sdk
+cd $BUILD_ROOT/source-copy/frameserver_sdk
+spank build
+
 # build release
 cd $BUILD_ROOT/source-copy
 $SPANK --jobs 4 rebuild release
