@@ -4,7 +4,7 @@ BUILD_ROOT=/root/build
 SPANK_REPO=https://github.com/noname22/spank.git
 SPANK=$BUILD_ROOT/spank/spank
 
-ARTIFACTS="NetCleanFrameServer.exe NetCleanFrameServer.exe.debug"
+ARTIFACTS="NetCleanFrameServer.exe"
 FRAMESERVERSDK_ARTIFACTS="frameserver_sdk/videosdk.dll"
 
 set -e
@@ -25,10 +25,6 @@ git clone $SPANK_REPO $BUILD_ROOT/spank
 cd $BUILD_ROOT/spank
 ./build.sh
 cp spank /usr/bin
-
-# build dependencies
-cd $BUILD_ROOT/source-copy/deps
-./deps.sh all 32bit
 
 # build libvx
 cd $BUILD_ROOT/source-copy/libvx

@@ -3,7 +3,7 @@
 	url = https://github.com/NetClean/frameserver_sdk.git
 	pushurl = git@github.com:NetClean/frameserver_sdk.git
 [submodule "deps"]
-	path = deps
+	path = docker/deps
 	url = ssh://git@stash.intra.netclean.com:7999/an/videocontrolsubprocessdependencies.git
 [submodule "libvx"]
 	path = libvx
