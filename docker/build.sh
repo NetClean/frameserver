@@ -4,7 +4,7 @@ BUILD_ROOT=/root/build
 SPANK_REPO=https://github.com/noname22/spank.git
 SPANK=$BUILD_ROOT/spank/spank
 
-ARTIFACTS="NetCleanFrameServer.exe"
+ARTIFACTS="NetCleanFrameServer.exe NetCleanFrameServer.exe.debug"
 FRAMESERVERSDK_ARTIFACTS="frameserver_sdk/videosdk.dll"
 
 set -e
