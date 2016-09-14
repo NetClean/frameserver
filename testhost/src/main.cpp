@@ -3,6 +3,7 @@
 #include "IpcMessageQueue.h"
 #include "flog.h"
 #include <fstream>
+#include <iostream>
 
 void writeBuffer(const std::string& filename, const char* buffer, int size)
 {
@@ -17,7 +18,7 @@ int main(int argc, char** argv)
 {
 	CommandLine::Start();
 	PlatformPtr platform = Platform::Create();
-	IpcMessageQueuePtr messageQueue = IpcMessageQueue::Create("test", 2, 1024 * 1024 * 10, 2, 1024 * 16);
+	IpcMessageQueuePtr messageQueue = IpcMessageQueue::Create("test", 2, 1024 * 1024 * 50, 2, 1024 * 16);
 
 	bool done = false;
 

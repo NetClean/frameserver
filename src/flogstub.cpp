@@ -20,7 +20,6 @@ const char* Flog_SeverityToString(Flog_Severity severity)
 	return severityString[Flog_SeverityToIndex(severity)];
 }
 
-
 static const Flog_Severity logFileSeverity = Flog_SDebug3;
 
 void Flog_Log(const char* file, uint32_t lineNumber, Flog_Severity severity, const char* format, ...)
