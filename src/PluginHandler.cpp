@@ -23,6 +23,7 @@ struct Plugin
 	bool debug = false;
 	bool startSuspended = false;
 	bool showWindow = false;
+	int messagesRelayed = 0;
 };
 
 class CPluginHandler : public PluginHandler 
@@ -178,7 +179,6 @@ class CPluginHandler : public PluginHandler
 			if(!plugin.started || !plugin.process->IsRunning())
 				continue;
 
-			//FlogD("signaling");
 			plugin.messageQueue->WriteMessage("cmd", sigs[signal]);
 		}
 	}
@@ -206,7 +206,6 @@ class CPluginHandler : public PluginHandler
 
 			while(!done){
 				bool ret = plugin.messageQueue->GetReadBuffer([&](const std::string& type, const char* buffer, size_t size){
-					//FlogD("waiting");
 					if(Tools::StartsWith(type, "results")){
 						// results message, relay to host
 						FlogD("relaying results from: " << plugin.executable);
@@ -223,6 +222,8 @@ class CPluginHandler : public PluginHandler
 							hostQueue->WriteMessage(Str("error 0 " << plugin.name), "result too big for frameserver/host message queue");
 							FlogW("result too big for frameserver/host message queue (" << size << "), plugin: " << plugin.executable << " " << plugin.name);
 						}
+
+						plugin.messagesRelayed++;
 					}
 
 					else if(type == "status" && std::string(buffer) == "ready"){
@@ -230,7 +231,6 @@ class CPluginHandler : public PluginHandler
 
 						if(!expectFinished){
 							done = true;
-							//FlogD("ready");
 						}
 						else{
 							FlogD("(ignoring ready)");
@@ -240,12 +240,11 @@ class CPluginHandler : public PluginHandler
 					else if(type == "status" && std::string(buffer) == "finished"){
 						// plugin is finished with file/session
 
-						if(expectFinished){
-							plugin.finished = true;
-							done = true;
-							FlogD("finished");
-						}else{
-							FlogD("(ignoring finished)");
+						plugin.finished = true;
+						done = true;
+
+						if(plugin.messagesRelayed <= 0){
+							hostQueue->WriteMessage(Str("error 0 " << plugin.name), "plugin unexpectedly finished without reporting an error or result");
 						}
 					}
 
@@ -255,6 +254,7 @@ class CPluginHandler : public PluginHandler
 						done = true;
 						plugin.started = false;
 						hostQueue->WriteMessage(Str(type << " " << plugin.name), buffer);
+						plugin.messagesRelayed++;
 					}
 					
 					else{
