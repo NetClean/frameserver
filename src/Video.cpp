@@ -110,10 +110,13 @@ class CVideo : public Video {
 		return std::string(vx_get_audio_sample_format_str(video));
 	}
 	
-	virtual void SetAudioParameters(int sampleRate, int channels, SampleFormat format, OnAudioFn fn)
+	virtual void SetAudioParameters(int sampleRate, int channels, SampleFormat format, OnAudioFn fn, int maxSamplesPerFrame)
 	{
 		audioFn = fn;
 		vx_error err = vx_set_audio_params(video, sampleRate, channels, (vx_sample_fmt)format, AudioCb, this);
+		AssertEx(err == VX_ERR_SUCCESS, VideoEx, vx_get_error_str(err));
+		
+		err = vx_set_max_samples_per_frame(video, maxSamplesPerFrame);
 		AssertEx(err == VX_ERR_SUCCESS, VideoEx, vx_get_error_str(err));
 	}
 
@@ -129,15 +132,23 @@ class CVideo : public Video {
 
 		if(err == VX_ERR_EOF)
 			return false;
-		
-		AssertEx(err == VX_ERR_SUCCESS, VideoEx, vx_get_error_str(err));
-		
-		frame->flags = vx_frame_get_flags(vf->frame);
-		frame->bytePos = vx_frame_get_byte_pos(vf->frame);
-		frame->dts = vx_frame_get_dts(vf->frame);
-		frame->pts = vx_frame_get_pts(vf->frame);
-		frame->ptsSeconds = vx_timestamp_to_seconds(video, frame->pts);
-		frame->dtsSeconds = vx_timestamp_to_seconds(video, frame->dts);
+
+		if(err == VX_ERR_FRAME_DEFERRED)
+		{
+			frame->deferred = true;
+		}
+		else
+		{
+			AssertEx(err == VX_ERR_SUCCESS, VideoEx, vx_get_error_str(err));
+			
+			frame->deferred = false;
+			frame->flags = vx_frame_get_flags(vf->frame);
+			frame->bytePos = vx_frame_get_byte_pos(vf->frame);
+			frame->dts = vx_frame_get_dts(vf->frame);
+			frame->pts = vx_frame_get_pts(vf->frame);
+			frame->ptsSeconds = vx_timestamp_to_seconds(video, frame->pts);
+			frame->dtsSeconds = vx_timestamp_to_seconds(video, frame->dts);
+		}
 
 		return true;
 	}
