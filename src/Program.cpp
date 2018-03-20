@@ -170,7 +170,6 @@ class CProgram : public Program {
 					
 					// copy all available audio to the non-video frame
 					info->num_samples = CopyAudio(sampleBuffers, frameAudioBuffer, maxSamplesPerFrame, channels, nullptr);
-					FlogD("audio only frame with " << info->num_samples << " samples, total: " << totSamples);
 				}
 				else
 				{
@@ -263,9 +262,6 @@ class CProgram : public Program {
 			sampleBuffers.pop();
 		}
 
-		FlogD("buffers left: " << sampleBuffers.GetContainer().size());
-		FlogD("sampleBuffers.empty(): " << sampleBuffers.empty());
-		
 		return numSamples;
 	}
 
