@@ -26,16 +26,6 @@ cd $BUILD_ROOT/spank
 ./build.sh
 cp spank /usr/bin
 
-# build libvx
-cd $BUILD_ROOT/source-copy/libvx
-spank --target_platform mingw32 build
-spank install
-
-# build libshmipc
-cd $BUILD_ROOT/source-copy/libshmipc
-spank build
-spank install
-
 # build frameserver_sdk
 cd $BUILD_ROOT/source-copy/frameserver_sdk
 spank build
