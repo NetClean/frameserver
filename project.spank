@@ -8,7 +8,7 @@ ldflags             static static-libgcc static-libstdc++
 ldflags             Wl,-Bstatic
 
 target_platform     mingw32
-lib-static          libvx libshmipc
+depends             libshmipc libvx
 
 oncleanscript       "rm -f $(target).debug"
 

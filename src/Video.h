@@ -46,7 +46,7 @@ class Video {
 
 	virtual bool GetFrame(int width, int height, PixelFormat fmt, FramePtr frame) = 0;
 
-	virtual void SetAudioParameters(int sampleRate, int channels, SampleFormat format, OnAudioFn fn) = 0;
+	virtual void SetAudioParameters(int sampleRate, int channels, SampleFormat format, OnAudioFn fn, int maxSamplesPerFrame) = 0;
 
 	static int CountFramesInFile(const std::string& filename); 
 	

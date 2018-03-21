@@ -9,6 +9,7 @@ struct Frame {
 		FKeyFrame = 1
 	};
 
+	bool deferred;
 	unsigned int flags;
 	int64_t bytePos, dts, pts;
 	int width, height, bytesPerPixel;

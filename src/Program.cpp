@@ -18,6 +18,10 @@
 #include "PriorityQueue.h"
 #include "SampleBuffer.h"
 
+#define API_VERSION_MAJOR 1
+#define API_VERSION_MINOR 0
+#define API_VERSION_PATCH 0
+
 extern "C" {
 #pragma pack(4)
 struct __attribute__ ((packed)) ShmVidInfo {
@@ -37,10 +41,15 @@ struct __attribute__ ((packed)) ShmVidInfo {
 	double dts_seconds;
 
 	char has_audio;
-	int orig_sample_rate;
-	int channels;
-	int num_samples;
+	int32_t orig_sample_rate;
+	int32_t channels;
+	int32_t num_samples;
 	char sample_format_str[16];
+	char has_video;
+
+	int32_t api_version_major;
+	int32_t api_version_minor;
+	int32_t api_version_patch;
 };
 #pragma pack() // restore packing
 }
@@ -48,9 +57,14 @@ struct __attribute__ ((packed)) ShmVidInfo {
 #define NCV_HEADER_SIZE 4096
 #define NCV_PADDING_SIZE 4096
 
+typedef PriorityQueue<SampleBufferPtr, CompareSampleBuffers> SampleBufferQueue;
+
 class CProgram : public Program {
 	public:
-	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue, PluginHandlerPtr pluginHandler, PlatformPtr platform, int totFrames){
+	int64_t totSamples = 0;
+	void RunPlugins(const std::string& videoFile, IpcMessageQueuePtr hostQueue, 
+		PluginHandlerPtr pluginHandler, PlatformPtr platform, int totFrames)
+	{
 		VideoPtr video = Video::Create(videoFile);
 		FramePtr frame = Video::CreateFrame(video->GetWidth(), video->GetHeight(), Video::PixelFormatRgb32);
 
@@ -79,6 +93,10 @@ class CProgram : public Program {
 		volatile ShmVidInfo* info = (ShmVidInfo*)frameShm->GetPtrRw();
 
 		info->tot_frames = totFrames;
+
+		info->api_version_major = API_VERSION_MAJOR;
+		info->api_version_minor = API_VERSION_MINOR;
+		info->api_version_patch = API_VERSION_PATCH;
 
 		try {
 			info->fps = video->GetFrameRate();
@@ -110,7 +128,9 @@ class CProgram : public Program {
 			std::string fmt = video->GetSampleFormatStr();
 			strncpy((char*)info->sample_format_str, fmt.c_str(), 16);
 		
-			video->SetAudioParameters(sampleRate, channels, Video::SampleFormatFlt, audioFn);
+			// leave some space for maxSamplesPerFrame, since libvx might overrun the buffer a bit
+			// for large audio frames
+			video->SetAudioParameters(sampleRate, channels, Video::SampleFormatFlt, audioFn, maxSamplesPerFrame - 16384);
 		}
 
 		FlogD("Starting session...");
@@ -120,11 +140,10 @@ class CProgram : public Program {
 		double lastPts = .0;
 		double fps = info->fps;
 
-		try {
-			while(true){
-				if(!video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb32, frame))
-					break;
-				
+		try 
+		{
+			while(video->GetFrame(frame->width, frame->height, Video::PixelFormatRgb32, frame))
+			{
 				// report progress to host
 				int32_t* progress = (int32_t*)hostQueue->GetWriteBuffer();
 				progress[0] = nFrames;
@@ -133,69 +152,71 @@ class CProgram : public Program {
 
 				// process plugin messages
 				pluginHandler->ProcessMessages(platform, hostQueue, false);
-				
-				// calculate pts
-				double pts = video->TimeStampToSeconds(frame->pts);
-
-				if(nFrames == 0){
-					// first frame, make sure it will get a reported pts of 0
-					lastPts = pts;
-				}
-
-				double delta = pts - lastPts;
-
-				if(delta < .0 || delta > 2.0)
-				{
-					// if the next timestamp is backwards in time or there's a too 
-					// large gap between the next timestamp and this, just increase reported
-					// pts with frame rate
-					FlogW("pts delta too large or negative, adjusting from: " << delta << " to: " << 1.0 / fps);
-					delta = 1.0 / fps;
-				}
-
-				reportPts += delta;
-				lastPts = pts;
-				
-				int numSamples = 0;
-				
+					
 				float* frameAudioBuffer = (float*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE + frameBufferSize + NCV_PADDING_SIZE);
 
-				// check the avialble audio buffers and if their timestamp matches the frame
-				// if they do, add them to the frame
-
-				while(!sampleBuffers.empty() && sampleBuffers.top()->pts <= pts){
-					SampleBufferPtr buffer = sampleBuffers.top();
-
-					int nBufferSamples = (int)buffer->samples.size() / channels;
-
-					if(numSamples + nBufferSamples < maxSamplesPerFrame){
-						std::copy(buffer->samples.begin(), buffer->samples.end(), frameAudioBuffer + numSamples * channels);
-						numSamples += nBufferSamples;
-					}
-					else{
-						FlogW("sample buffer overrun");
-					}
-
-					sampleBuffers.pop();
+				if(frame->deferred)
+				{
+					// video deferred
+					
+					// prepare frame and signal plugins
+					info->flags = frame->flags;
+					info->byte_pos = frame->bytePos;
+					info->dts = frame->dts;
+					info->pts = frame->pts; 
+					info->dts_seconds = video->TimeStampToSeconds(frame->dts);
+					info->pts_seconds = reportPts;
+					info->has_video = 0;
+					
+					// copy all available audio to the non-video frame
+					info->num_samples = CopyAudio(sampleBuffers, frameAudioBuffer, maxSamplesPerFrame, channels, nullptr);
 				}
+				else
+				{
+					// normal video-frame
 
-				info->num_samples = numSamples;
+					// calculate pts
+					double pts = video->TimeStampToSeconds(frame->pts);
 
-				memcpy((void*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE), frame->buffer, frameBufferSize);
-				
-				// prepare frame and signal plugins
-				info->width = frame->width;
-				info->height = frame->height;
-				info->flags = frame->flags;
-				info->byte_pos = frame->bytePos;
-				info->dts = frame->dts;
-				info->pts = frame->pts; 
-				info->dts_seconds = video->TimeStampToSeconds(frame->dts);
-				info->pts_seconds = reportPts;
-				
+					if(nFrames == 0){
+						// first frame, make sure it will get a reported pts of 0
+						lastPts = pts;
+					}
+
+					double delta = pts - lastPts;
+
+					if(delta < .0 || delta > 2.0)
+					{
+						// if the next timestamp is backwards in time or there's a too 
+						// large gap between the next timestamp and this, just increase reported
+						// pts with frame rate
+						FlogW("pts delta too large or negative, adjusting from: " << delta << " to: " << 1.0 / fps);
+						delta = 1.0 / fps;
+					}
+
+					reportPts += delta;
+					lastPts = pts;
+
+					info->num_samples = CopyAudio(sampleBuffers, frameAudioBuffer, maxSamplesPerFrame, channels, &pts);
+
+					memcpy((void*)((char*)frameShm->GetPtrRw() + NCV_HEADER_SIZE), frame->buffer, frameBufferSize);
+					
+					// prepare frame
+					info->width = frame->width;
+					info->height = frame->height;
+					info->flags = frame->flags;
+					info->byte_pos = frame->bytePos;
+					info->dts = frame->dts;
+					info->pts = frame->pts; 
+					info->dts_seconds = video->TimeStampToSeconds(frame->dts);
+					info->pts_seconds = reportPts;
+					info->has_video = 1;
+					
+					nFrames++;
+				}
+					
+				// signal plugins
 				pluginHandler->Signal(PluginHandler::SignalNewFrame);
-
-				nFrames++;
 			}
 		}
 
@@ -219,7 +240,33 @@ class CProgram : public Program {
 		FlogD("decoded: " << nFrames << " frames...");
 	}
 
-	int Run(std::string shmName){
+	int32_t CopyAudio(SampleBufferQueue& sampleBuffers, float* dst, int maxSamples, int channels, double* pts)
+	{
+		int32_t numSamples = 0;
+
+		while(!sampleBuffers.empty() && (pts == nullptr || sampleBuffers.top()->pts <= *pts))
+		{
+			SampleBufferPtr buffer = sampleBuffers.top();
+
+			int nBufferSamples = (int)buffer->samples.size() / channels;
+
+			if(numSamples + nBufferSamples < maxSamples){
+				std::copy(buffer->samples.begin(), buffer->samples.end(), dst + numSamples * channels);
+				numSamples += nBufferSamples;
+				totSamples += nBufferSamples;
+			}
+			else{
+				FlogW("sample buffer overrun");
+			}
+
+			sampleBuffers.pop();
+		}
+
+		return numSamples;
+	}
+
+	int Run(std::string shmName)
+	{
 		PlatformPtr platform;
 
 		try { 
