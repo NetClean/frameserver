@@ -5,7 +5,7 @@ SPANK_REPO=https://github.com/noname22/spank.git
 SPANK=$BUILD_ROOT/spank/spank
 
 ARTIFACTS="NetCleanFrameServer.exe NetCleanFrameServer.exe.debug"
-FRAMESERVERSDK_ARTIFACTS="frameserver_sdk/videosdk.dll"
+FRAMESERVERSDK_ARTIFACTS="frameserver_sdk/videosdk.dll frameserver_sdk/videosdk64.dll"
 
 set -e
 
@@ -28,7 +28,8 @@ cp spank /usr/bin
 
 # build frameserver_sdk
 cd $BUILD_ROOT/source-copy/frameserver_sdk
-spank build
+spank rebuild release
+spank rebuild release64
 
 # build release
 cd $BUILD_ROOT/source-copy
