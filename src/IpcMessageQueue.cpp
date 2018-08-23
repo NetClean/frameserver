@@ -19,16 +19,16 @@ class CIpcMessageQueue : public IpcMessageQueue {
 
 		if(isHost){	
 			auto err = shmipc_create(writeName.c_str(), writeQueueSize, writeQueueBuffers, SHMIPC_AM_WRITE, &writeQueue);
-			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not create writer");
+			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not create writer: " << shmipc_get_last_error_msg());
 			
 			err = shmipc_create(readName.c_str(), readQueueSize, readQueueBuffers, SHMIPC_AM_READ, &readQueue);
-			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not create reader");
+			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not create reader: " << shmipc_get_last_error_msg());
 		}else{
 			auto err = shmipc_open(writeName.c_str(), SHMIPC_AM_WRITE, &writeQueue);
-			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not open writer");
+			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not open writer: " << shmipc_get_last_error_msg() << "("<< err <<")");
 
 			err = shmipc_open(readName.c_str(), SHMIPC_AM_READ, &readQueue);
-			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not open reader");
+			AssertEx(err == SHMIPC_ERR_SUCCESS, IpcEx, "could not open reader: " << shmipc_get_last_error_msg());
 		}
 	}
 

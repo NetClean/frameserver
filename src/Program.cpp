@@ -272,6 +272,8 @@ class CProgram : public Program {
 		try { 
 	 		platform = Platform::Create();
 			bool done = false;
+			bool onFrameCountMessages = false;
+
 			IpcMessageQueuePtr hostQueue = IpcMessageQueue::Open(shmName);
 			PluginHandlerPtr pluginHandler = PluginHandler::Create();
 
@@ -283,7 +285,12 @@ class CProgram : public Program {
 
 				if(type == "run"){
 					try {
-						int nFrames = Video::CountFramesInFile(message);
+						int nFrames = Video::CountFramesInFile(message, [&](int stream){
+							if(onFrameCountMessages){
+								hostQueue->WriteMessage("on_frame_count", Str(stream));
+							}
+						});
+
 						RunPlugins(message, hostQueue, pluginHandler, platform, nFrames);
 						FlogExpD(nFrames);
 					} catch (VideoEx ex) {
@@ -357,6 +364,11 @@ class CProgram : public Program {
 					}else{
 						FlogE("argument expects: argument/[plugin name]/[key] [argument] (literally slashes)");
 					}
+				}
+
+				else if(type == "on_frame_count_messages")
+				{
+					onFrameCountMessages = message == "true";
 				}
 
 				else if(type == "exit")

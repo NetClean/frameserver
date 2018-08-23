@@ -154,10 +154,17 @@ class CVideo : public Video {
 	}
 };
 
-int Video::CountFramesInFile(const std::string& filename)
+void OnFrameCount(int stream, void* data)
+{
+	auto cb = (std::function<void(int)>*)data;
+	(*cb)(stream);
+}
+
+int Video::CountFramesInFile(const std::string& filename, std::function<void(int)> onFrameCount)
 {
 	int count = 0;
-	vx_error err = vx_count_frames_in_file(filename.c_str(), &count);
+
+	vx_error err = vx_count_frames_in_file_with_cb(filename.c_str(), &count, OnFrameCount, (void*)&onFrameCount);
 	AssertEx(err == VX_ERR_SUCCESS, VideoEx, vx_get_error_str(err));
 	return count;
 }
